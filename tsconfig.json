@@ -1,7 +1,15 @@
 {
-  "include": ["lib/**/*.ts"],
+  "include": [
+      "lib/**/*.ts",
+      "index.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/node_modules/*"
+  ],
   "compilerOptions": {
-    "outDir": "./build/",
+    "outDir": "build",
+    "sourceMap": true,
     "module": "es6",
     "target": "es5",
     "moduleResolution": "node",

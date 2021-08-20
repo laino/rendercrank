@@ -1,4 +1,4 @@
-declare module "core/protocol" {
+declare module "lib/core/protocol" {
     export abstract class ProtocolWriter {
         readonly shared: boolean;
         private textEncoder;
@@ -89,9 +89,9 @@ declare module "core/protocol" {
         receive(buffers: ArrayBuffer[]): ArrayBuffer[];
     }
 }
-declare module "core/resource" {
-    import { ProtocolReader, ProtocolWriter } from "core/protocol";
-    import { Renderer } from "core/renderer";
+declare module "lib/core/resource" {
+    import { ProtocolReader, ProtocolWriter } from "lib/core/protocol";
+    import { Renderer } from "lib/core/renderer";
     export const RESOURCE_MAP: Record<string, typeof Resource>;
     export function registerResourceType(resource: typeof Resource): void;
     export enum ResourceState {
@@ -125,10 +125,10 @@ declare module "core/resource" {
         abstract unload(): any;
     }
 }
-declare module "core/instructor" {
-    import { ProtocolWriter } from "core/protocol";
-    import { ResourceRef } from "core/resource";
-    import { Command } from "core/command";
+declare module "lib/core/instructor" {
+    import { ProtocolWriter } from "lib/core/protocol";
+    import { ResourceRef } from "lib/core/resource";
+    import { Command } from "lib/core/command";
     export enum Instruction {
         STOP = 0,
         RUN_COMMAND = 1,
@@ -150,10 +150,10 @@ declare module "core/instructor" {
         unloadResource(resource: ResourceRef): void;
     }
 }
-declare module "core/command" {
-    import { Renderer } from "core/renderer";
-    import { ProtocolReader, ProtocolWriter } from "core/protocol";
-    import { Instructor } from "core/instructor";
+declare module "lib/core/command" {
+    import { Renderer } from "lib/core/renderer";
+    import { ProtocolReader, ProtocolWriter } from "lib/core/protocol";
+    import { Instructor } from "lib/core/instructor";
     export const COMMAND_MAP: Record<string, Command>;
     export interface Command<A extends any[] = any[]> {
         name: string;
@@ -162,9 +162,9 @@ declare module "core/command" {
     }
     export function Command<A extends any[]>(def: Command<A>): Command<A>;
 }
-declare module "core/renderer" {
-    import { Resource, ResourceID } from "core/resource";
-    import { ProtocolReader } from "core/protocol";
+declare module "lib/core/renderer" {
+    import { Resource, ResourceID } from "lib/core/resource";
+    import { ProtocolReader } from "lib/core/protocol";
     export interface Renderer {
         gl: WebGL2RenderingContext;
         getResource<T extends typeof Resource>(id: ResourceID, type: T): InstanceType<T>;
@@ -179,15 +179,15 @@ declare module "core/renderer" {
         render(protocol: ProtocolReader): void;
     }
 }
-declare module "core/index" {
-    export * from "core/renderer";
-    export * from "core/resource";
-    export * from "core/command";
-    export * from "core/protocol";
-    export * from "core/instructor";
+declare module "lib/core/index" {
+    export * from "lib/core/renderer";
+    export * from "lib/core/resource";
+    export * from "lib/core/command";
+    export * from "lib/core/protocol";
+    export * from "lib/core/instructor";
 }
-declare module "resources/buffer" {
-    import { ProtocolReader, ProtocolWriter, Resource, ResourceRef } from "core/index";
+declare module "lib/resources/buffer" {
+    import { ProtocolReader, ProtocolWriter, Resource, ResourceRef } from "lib/core/index";
     export interface ArrayBufferViewLike extends ArrayBufferView {
         readonly BYTES_PER_ELEMENT: number;
         readonly length: number;
@@ -218,8 +218,8 @@ declare module "resources/buffer" {
         unload(): void;
     }
 }
-declare module "resources/program" {
-    import { Resource, ResourceRef, ProtocolReader, ProtocolWriter } from "core/index";
+declare module "lib/resources/program" {
+    import { Resource, ResourceRef, ProtocolReader, ProtocolWriter } from "lib/core/index";
     export type AttributeType = 'float' | 'vec2' | 'vec3' | 'vec4' | 'mat2' | 'mat3' | 'mat4' | 'int' | 'ivec2' | 'ivec3' | 'ivec4' | 'uint' | 'uvec2' | 'uvec3' | 'uvec4';
     export type UniformType = AttributeType | 'bool' | 'bvec2' | 'bvec3' | 'bvec4';
     export type AttributeMap = Record<string, AttributeType>;
@@ -246,12 +246,12 @@ declare module "resources/program" {
         unload(): void;
     }
 }
-declare module "resources/index" {
-    export * from "resources/buffer";
-    export * from "resources/program";
+declare module "lib/resources/index" {
+    export * from "lib/resources/buffer";
+    export * from "lib/resources/program";
 }
-declare module "render-context" {
-    import { BufferRef, ArrayBufferViewLikeType } from "resources/index";
+declare module "lib/render-context" {
+    import { BufferRef, ArrayBufferViewLikeType } from "lib/resources/index";
     export type RenderContextID = number;
     export namespace RenderContextID {
         function nextID(): RenderContextID;
@@ -289,9 +289,9 @@ declare module "render-context" {
         allocateSpace(amount: number): any;
     }
 }
-declare module "commands/run-program" {
-    import { Command } from "core/index";
-    import { ProgramRef, BufferRef } from "resources/index";
+declare module "lib/commands/run-program" {
+    import { Command } from "lib/core/index";
+    import { ProgramRef, BufferRef } from "lib/resources/index";
     export interface RunProgramOptions {
         program: ProgramRef;
         buffer: BufferRef;
@@ -300,20 +300,20 @@ declare module "commands/run-program" {
     }
     export const RunProgram: Command<[options: RunProgramOptions]>;
 }
-declare module "commands/index" {
-    export * from "commands/run-program";
+declare module "lib/commands/index" {
+    export * from "lib/commands/run-program";
 }
-declare module "programs/colored-triangles" {
-    import { ProgramRef } from "resources/index";
+declare module "lib/programs/colored-triangles" {
+    import { ProgramRef } from "lib/resources/index";
     export const ColoredTrianglesProgram: ProgramRef;
 }
-declare module "programs/index" {
-    export * from "programs/colored-triangles";
+declare module "lib/programs/index" {
+    export * from "lib/programs/colored-triangles";
 }
-declare module "render-target" {
-    import { Instructor } from "core/index";
-    import { RenderContext } from "render-context";
-    import { ProgramRef } from "resources/index";
+declare module "lib/render-target" {
+    import { Instructor } from "lib/core/index";
+    import { RenderContext } from "lib/render-context";
+    import { ProgramRef } from "lib/resources/index";
     export class RenderTarget {
         private context;
         zIndex: number;
@@ -330,10 +330,10 @@ declare module "render-target" {
         submit(instructor: Instructor): void;
     }
 }
-declare module "component" {
-    import { ProtocolWriter } from "core/index";
-    import { RenderTarget } from "render-target";
-    import { RenderContext } from "render-context";
+declare module "lib/component" {
+    import { ProtocolWriter } from "lib/core/index";
+    import { RenderTarget } from "lib/render-target";
+    import { RenderContext } from "lib/render-context";
     export type RenderFunction = (target: RenderTarget) => Promise<void> | void;
     export class Component extends RenderContext {
         fn: RenderFunction;
@@ -344,9 +344,9 @@ declare module "component" {
         unload(protocol: ProtocolWriter): void;
     }
 }
-declare module "single-threaded-renderer" {
-    import { CanvasRenderer } from "core/index";
-    import { Component } from "component";
+declare module "lib/single-threaded-renderer" {
+    import { CanvasRenderer } from "lib/core/index";
+    import { Component } from "lib/component";
     export class SingleThreadedCanvasRenderer extends CanvasRenderer {
         private protocolWriter;
         private protocolReader;
@@ -354,12 +354,15 @@ declare module "single-threaded-renderer" {
         unloadComponent(component: Component): void;
     }
 }
+declare module "lib/index" {
+    export * from "lib/core/index";
+    export * from "lib/resources/index";
+    export * from "lib/commands/index";
+    export * from "lib/render-target";
+    export * from "lib/render-context";
+    export * from "lib/component";
+    export * from "lib/single-threaded-renderer";
+}
 declare module "index" {
-    export * from "core/index";
-    export * from "resources/index";
-    export * from "commands/index";
-    export * from "render-target";
-    export * from "render-context";
-    export * from "component";
-    export * from "single-threaded-renderer";
+    export * from "lib/index";
 }

@@ -9,5 +9,5 @@ var scene = new Component(function (t) {
 });
 // Render the component
 renderer.renderComponent(scene);
-// Free resources allocated by this component
+// Unreference and unload resources
 renderer.unloadComponent(scene);

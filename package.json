@@ -2,7 +2,7 @@
   "name": "rendercrank",
   "version": "1.0.0",
   "description": "Unopinionated 2D WebGL Renderer",
-  "main": "index.js",
+  "browser": "build/rendercrank.production.js",
   "repository": "https://github.com/laino/rendercrank",
   "author": "Nils Kuhnhenn",
   "license": "MIT",

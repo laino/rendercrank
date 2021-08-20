@@ -20,6 +20,16 @@ return /******/ (() => { // webpackBootstrap
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
+/***/ "./index.ts":
+/*!******************!*\
+  !*** ./index.ts ***!
+  \******************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"ArrayBufferProtocolReader\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.ArrayBufferProtocolReader),\n/* harmony export */   \"ArrayBufferProtocolWriter\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.ArrayBufferProtocolWriter),\n/* harmony export */   \"Buffer\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.Buffer),\n/* harmony export */   \"BufferRef\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.BufferRef),\n/* harmony export */   \"COMMAND_MAP\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.COMMAND_MAP),\n/* harmony export */   \"CanvasRenderer\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.CanvasRenderer),\n/* harmony export */   \"Command\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.Command),\n/* harmony export */   \"Component\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.Component),\n/* harmony export */   \"DrawCallBatcher\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.DrawCallBatcher),\n/* harmony export */   \"Instruction\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.Instruction),\n/* harmony export */   \"Instructor\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.Instructor),\n/* harmony export */   \"Program\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.Program),\n/* harmony export */   \"ProgramRef\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.ProgramRef),\n/* harmony export */   \"ProtocolReader\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.ProtocolReader),\n/* harmony export */   \"ProtocolWriter\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.ProtocolWriter),\n/* harmony export */   \"RESOURCE_MAP\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.RESOURCE_MAP),\n/* harmony export */   \"RenderContext\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.RenderContext),\n/* harmony export */   \"RenderContextID\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.RenderContextID),\n/* harmony export */   \"RenderTarget\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.RenderTarget),\n/* harmony export */   \"Resource\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.Resource),\n/* harmony export */   \"ResourceID\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.ResourceID),\n/* harmony export */   \"ResourceRef\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.ResourceRef),\n/* harmony export */   \"ResourceState\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.ResourceState),\n/* harmony export */   \"RunProgram\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.RunProgram),\n/* harmony export */   \"SingleThreadedCanvasRenderer\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.SingleThreadedCanvasRenderer),\n/* harmony export */   \"registerResourceType\": () => (/* reexport safe */ _lib__WEBPACK_IMPORTED_MODULE_0__.registerResourceType)\n/* harmony export */ });\n/* harmony import */ var _lib__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./lib */ \"./lib/index.ts\");\n\n\n\n//# sourceURL=webpack://RenderCrank/./index.ts?");
+
+/***/ }),
+
 /***/ "./lib/commands/index.ts":
 /*!*******************************!*\
   !*** ./lib/commands/index.ts ***!
@@ -260,7 +270,7 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module can't be inlined because the eval devtool is used.
-/******/ 	var __webpack_exports__ = __webpack_require__("./lib/index.ts");
+/******/ 	var __webpack_exports__ = __webpack_require__("./index.ts");
 /******/ 	
 /******/ 	return __webpack_exports__;
 /******/ })()

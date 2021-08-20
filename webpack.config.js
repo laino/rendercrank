@@ -4,7 +4,7 @@ const webpack = require('webpack');
 const mode = process.env['NODE_ENV'] || 'development';
 
 module.exports = {
-    entry: './lib/index.ts',
+    entry: './index.ts',
     mode,
     module: {
         rules: [
