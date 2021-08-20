@@ -54,8 +54,8 @@ export class CanvasRenderer implements Renderer {
             }
 
             if (action === Instruction.MAP_COMMAND) {
-                const commandName = protocol.readString();
                 const id = protocol.readUInt8();
+                const commandName = protocol.readString();
 
                 const command = COMMAND_MAP[commandName];
 

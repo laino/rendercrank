@@ -24,8 +24,8 @@ export class Instructor {
 
         for (const command of Object.values(COMMAND_MAP)) {
             protocol.writeUInt8(Instruction.MAP_COMMAND);
-            protocol.writeString(command.name);
             protocol.writeUInt8(index);
+            protocol.writeString(command.name);
 
             this.mappedCommands[command.name] = index;
 
@@ -65,6 +65,7 @@ export class Instructor {
 
         if (resource.state === ResourceState.LOAD_ABORTED) {
             resource.state = ResourceState.LOADING;
+            return;
         }
 
         if (resource.state === ResourceState.UNLOADED) {

@@ -7,4 +7,7 @@ var renderer = new SingleThreadedCanvasRenderer(canvas);
 var scene = new Component(function (t) {
     t.rect(200, 200, 400, 400);
 });
+// Render the component
 renderer.renderComponent(scene);
+// Free resources allocated by this component
+renderer.unloadComponent(scene);

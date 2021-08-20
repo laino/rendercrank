@@ -17,4 +17,14 @@ export class SingleThreadedCanvasRenderer extends CanvasRenderer {
 
         this.render(this.protocolReader);
     }
+
+    public unloadComponent(component: Component) {
+        component.unload(this.protocolWriter);
+
+        const data = this.protocolWriter.flush();
+
+        this.protocolReader.receive(data);
+
+        this.render(this.protocolReader);
+    }
 }

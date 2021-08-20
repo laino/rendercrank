@@ -74,42 +74,58 @@ export abstract class ProtocolWriter {
 
     public writeFloat32Array(arr: ArrayLike<number>) {
         const offset = this.allocate(arr.length * 4, 4);
-        new Float32Array(this.writeBuffer).set(arr, offset / 4);
+        for (let i = 0, size = arr.length; i < size; i++) {
+            this.writeView.setFloat32(offset + i * 4, arr[i], IS_LITTLE_ENDIAN);
+        }
     }
 
     public writeFloat64Array(arr: ArrayLike<number>) {
         const offset = this.allocate(arr.length * 8, 8);
-        new Float64Array(this.writeBuffer).set(arr, offset / 8);
+        for (let i = 0, size = arr.length; i < size; i++) {
+            this.writeView.setFloat64(offset + i * 8, arr[i], IS_LITTLE_ENDIAN);
+        }
     }
 
     public writeInt8Array(arr: ArrayLike<number>) {
         const offset = this.allocate(arr.length, 1);
-        new Int8Array(this.writeBuffer).set(arr, offset);
+        for (let i = 0, size = arr.length; i < size; i++) {
+            this.writeView.setInt8(offset + i, arr[i]);
+        }
     }
 
     public writeInt16Array(arr: ArrayLike<number>) {
         const offset = this.allocate(arr.length * 2, 2);
-        new Int16Array(this.writeBuffer).set(arr, offset / 2);
+        for (let i = 0, size = arr.length; i < size; i++) {
+            this.writeView.setInt16(offset + i * 2, arr[i], IS_LITTLE_ENDIAN);
+        }
     }
 
     public writeInt32Array(arr: ArrayLike<number>) {
         const offset = this.allocate(arr.length * 4, 4);
-        new Int32Array(this.writeBuffer).set(arr, offset / 4);
+        for (let i = 0, size = arr.length; i < size; i++) {
+            this.writeView.setInt32(offset + i * 4, arr[i], IS_LITTLE_ENDIAN);
+        }
     }
 
     public writeUInt8Array(arr: ArrayLike<number>) {
         const offset = this.allocate(arr.length, 1);
-        new Uint8Array(this.writeBuffer).set(arr, offset);
+        for (let i = 0, size = arr.length; i < size; i++) {
+            this.writeView.setUint8(offset + i, arr[i]);
+        }
     }
 
     public writeUInt16Array(arr: ArrayLike<number>) {
         const offset = this.allocate(arr.length * 2, 2);
-        new Uint16Array(this.writeBuffer).set(arr, offset / 2);
+        for (let i = 0, size = arr.length; i < size; i++) {
+            this.writeView.setUint16(offset + i * 2, arr[i], IS_LITTLE_ENDIAN);
+        }
     }
 
     public writeUInt32Array(arr: ArrayLike<number>) {
         const offset = this.allocate(arr.length * 4, 4);
-        new Uint32Array(this.writeBuffer).set(arr, offset / 4);
+        for (let i = 0, size = arr.length; i < size; i++) {
+            this.writeView.setUint32(offset + i * 4, arr[i], IS_LITTLE_ENDIAN);
+        }
     }
 }
 

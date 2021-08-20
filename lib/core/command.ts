@@ -17,5 +17,7 @@ export function Command<A extends any[]>(def: Command<A>): Command<A> {
         throw new Error(`A command with the name ${def.name} is already registered.`);
     }
 
+    COMMAND_MAP[def.name] = def;
+
     return def;
 }

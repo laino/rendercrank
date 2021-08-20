@@ -351,6 +351,7 @@ declare module "single-threaded-renderer" {
         private protocolWriter;
         private protocolReader;
         renderComponent(component: Component): void;
+        unloadComponent(component: Component): void;
     }
 }
 declare module "index" {

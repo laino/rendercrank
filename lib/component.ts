@@ -35,5 +35,7 @@ export class Component extends RenderContext {
             resource.refcount--;
             instructor.unloadResource(resource);
         }
+
+        instructor.finish();
     }
 }
