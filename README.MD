@@ -36,14 +36,14 @@ const renderer = new SingleThreadedCanvasRenderer(canvas);
 
 // Components wrap functions that draw something and automatically
 // keep track of (and reference) resources used within them:
-const rectangle = component(t => t.rect(200, 200, 400, 400));
+const scene = component(t => t.rect(200, 200, 400, 400));
 
 // Render the component:
-renderer.renderComponent(rectangle);
+renderer.renderComponent(scene);
 
 // When you are not going to render some component in the near future,
 // it may be wise to release resources used by it.
-renderer.unload(rectangle);
+renderer.unload(scene);
 
 // Unloads things globally used by the renderer.
 renderer.reset();
