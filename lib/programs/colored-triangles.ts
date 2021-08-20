@@ -5,6 +5,7 @@ export const ColoredTrianglesProgram = new ProgramRef({
         color: 'vec4',
         position: 'vec4',
     },
+    uniforms: {},
     vertexShader: `
         out vec4 vColor;
 

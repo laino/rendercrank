@@ -30,28 +30,40 @@ export type AttributeMap = Record<string, AttributeType>;
 export type UniformMap = Record<string, UniformType>;
 
 export interface ProgramDefinition {
-    vertexShader?: string,
-    fragmentShader?: string,
+    vertexShader: string,
+    fragmentShader: string,
 
-    attributes?: AttributeMap;
-    uniforms?: UniformMap;
+    attributes: AttributeMap;
+    uniforms: UniformMap;
 }
 
-interface Attribute {
-    name: string,
+export interface OrdererdProgramDefinition extends ProgramDefinition {
+    attributeOrder: (keyof this['attributes'])[];
+    uniformOrder: (keyof this['uniforms'])[];
+}
+
+interface AttributeData {
     type: AttributeType,
     location: number
 }
 
-interface Uniform {
-    name: string,
+interface UniformData {
     type: UniformType,
     location: WebGLUniformLocation
 }
 
-export class ProgramRef extends ResourceRef {
-    public constructor(private def: ProgramDefinition) {
+export class ProgramRef<D extends ProgramDefinition = any> extends ResourceRef {
+    public def: OrdererdProgramDefinition & D;
+
+    public constructor(def: D) {
         super(Program);
+
+        this.def = Object.assign({}, def, {
+            vertexShader: createVertexShaderCode(def.vertexShader, def.uniforms, def.attributes),
+            fragmentShader: createFragmentShaderCode(def.vertexShader, def.uniforms),
+            attributeOrder: Object.keys(def.attributes),
+            uniformOrder: Object.keys(def.uniforms),
+        });
     }
 
     public writeData(protocol: ProtocolWriter) {
@@ -62,27 +74,26 @@ export class ProgramRef extends ResourceRef {
 export class Program extends Resource {
     static resourceName = 'Program';
 
-    private attributes: Attribute[];
-    private uniforms: Uniform[];
+    public def: OrdererdProgramDefinition;
 
-    private vertexShader: WebGLShader;
-    private fragmentShader: WebGLShader;
-    private program: WebGLProgram;
+    public attributes: Record<string, AttributeData>;
+    public uniforms: Record<string, UniformData>;
+
+    public vertexShader: WebGLShader;
+    public fragmentShader: WebGLShader;
+    public program: WebGLProgram;
 
     public load(protocol: ProtocolReader) {
-        const def: ProgramDefinition = JSON.parse(protocol.readString());
+        const def = this.def = JSON.parse(protocol.readString()) as OrdererdProgramDefinition;
 
         const gl = this.renderer.gl;
 
-        const attributes = def.attributes || {};
-        const uniforms = def.uniforms || {};
-
-        const vertexShaderSource = createVertexShaderCode(def.vertexShader, attributes, uniforms);
-        const fragmentShaderSource = createFragmentShaderCode(def.fragmentShader, uniforms);
+        const attributes = def.attributes;
+        const uniforms = def.uniforms;
 
         const vertexShader = this.vertexShader = gl.createShader(gl.VERTEX_SHADER);
 
-        gl.shaderSource(vertexShader, vertexShaderSource);
+        gl.shaderSource(vertexShader, def.vertexShader);
         gl.compileShader(vertexShader);
 
         if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
@@ -91,7 +102,7 @@ export class Program extends Resource {
 
         const fragmentShader = this.fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 
-        gl.shaderSource(fragmentShader, fragmentShaderSource);
+        gl.shaderSource(fragmentShader, def.fragmentShader);
         gl.compileShader(fragmentShader);
 
         if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
@@ -109,21 +120,19 @@ export class Program extends Resource {
             throw new Error(gl.getProgramInfoLog(program));
         }
 
-        this.attributes = Object.entries(attributes).map(([name, type]) => {
-            return {
-                name,
+        for (const [name, type] of Object.entries(attributes)) {
+            this.attributes[name] = {
                 type,
                 location: gl.getAttribLocation(program, name)
             };
-        });
+        }
 
-        this.uniforms = Object.entries(uniforms).map(([name, type]) => {
-            return {
-                name,
+        for (const [name, type] of Object.entries(uniforms)) {
+            this.uniforms[name] = {
                 type,
                 location: gl.getUniformLocation(program, name)
             };
-        });
+        }
     }
 
     public update() {
@@ -143,11 +152,11 @@ export class Program extends Resource {
     }
 }
 
-function createVertexShaderCode(body: string, attributes: AttributeMap, uniforms: UniformMap) {
+function createVertexShaderCode(body: string, uniforms: UniformMap, attributes: AttributeMap) {
     return (
         PREAMBLE +
-        createAttributes(attributes) +
         createUniforms(uniforms) +
+        createAttributes(attributes) +
         fixIndent(body)
     );
 }

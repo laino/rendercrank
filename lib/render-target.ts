@@ -1,41 +1,43 @@
-import { Instructor } from './core';
+import { Instructor, RenderContext } from './core';
 import { ColoredTrianglesProgram } from './programs';
 import { DrawCallBatch } from './draw-call-batch';
+import { Component } from './component';
 
-export class RenderTarget {
+export class RenderTarget extends RenderContext {
     public zIndex = 0;
 
-    private batchStack: DrawCallBatch[] = [];
-    private batch: DrawCallBatch;
+    private batch: DrawCallBatch = new DrawCallBatch(this);
 
-    private batches = new Set<DrawCallBatch>();
+    private contextStack: RenderContext[] = [];
+    private context: RenderContext;
 
-    public pushBatch(batch: DrawCallBatch) {
-        if (this.batch) {
-            this.batchStack.push(this.batch);
+    public pushContext(context: RenderContext) {
+        if (this.context) {
+            this.contextStack.push(this.context);
         }
 
-        this.batch = batch;
-
-        this.batches.add(batch);
+        this.context = context;
     }
 
-    public popBatch() {
-        return this.batch = this.batchStack.pop();
+    public popContext() {
+        return this.context = this.contextStack.pop();
     }
 
     public submit(instructor: Instructor) {
-        for (const batch of this.batches) {
-            instructor.pushContext(batch.context);
-            batch.submit(instructor);
-            instructor.popContext();
-        }
-
-        this.batches.clear();
+        this.batch.submit(instructor);
     }
 
     public translate(x: number, y: number) {
         //
+    }
+
+    /*
+    public renderIntoTexture(texture: RenderTexture, (fn: RenderTarget) => void) {
+    }
+    */
+
+    public component(component: Component) {
+        component.render(this);
     }
 
     public rect(x: number, y: number, width: number, height: number) {
@@ -53,7 +55,10 @@ export class RenderTarget {
 
     public triangles(data: number[]) {
         this.zIndex++;
-        this.batch.program(ColoredTrianglesProgram, data);
+        this.batch.program(ColoredTrianglesProgram, {
+            color: data,
+            position: data,
+        });
     }
 }
 

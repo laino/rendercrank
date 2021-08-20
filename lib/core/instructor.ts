@@ -1,7 +1,6 @@
 import { ProtocolWriter } from './protocol';
 import { ResourceRef, ResourceState } from './resource';
 import { Command, COMMAND_MAP } from './command';
-import { RenderContext } from './render-context';
 
 export enum Instruction {
     STOP,
@@ -16,9 +15,6 @@ export enum Instruction {
 export class Instructor {
     private mappedCommands: Record<string, number> = {};
     private commandProtocol: ProtocolWriter;
-
-    private contextStack: RenderContext[] = [];
-    private currentContext: RenderContext;
 
     public constructor(private protocol: ProtocolWriter) {
     }
@@ -39,18 +35,6 @@ export class Instructor {
         }
 
         this.commandProtocol = protocol.createWriter();
-    }
-
-    public pushContext(context: RenderContext) {
-        if (this.currentContext) {
-            this.contextStack.push(this.currentContext);
-        }
-
-        this.currentContext = context;
-    }
-
-    public popContext() {
-        return this.currentContext = this.contextStack.pop();
     }
 
     public command<C extends Command>(command: C, ... args: C extends Command<infer A> ? A : never) {
@@ -78,8 +62,6 @@ export class Instructor {
 
     public loadResource(resource: ResourceRef) {
         const protocol = this.protocol;
-
-        this.currentContext.addResource(resource);
 
         if (resource.state === ResourceState.LOAD_ABORTED) {
             resource.state = ResourceState.LOADING;

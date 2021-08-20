@@ -2,29 +2,35 @@ import { Instructor, RenderContext } from './core';
 import { RunProgram } from './commands';
 
 import {
+    ProgramDefinition,
     ProgramRef,
     BufferRef,
     ArrayBufferViewLike,
     ArrayBufferViewLikeType
 } from './resources';
 
-interface ProgramCall {
-    program: ProgramRef,
-    triangles: number[][],
-    trianglesLength: number
+
+interface ProgramCall<P extends ProgramDefinition> {
+    program: ProgramRef<P>;
+    attributes: Required<Record<keyof P['attributes'], number[]>>[];
 }
+
 
 export class DrawCallBatch {
     private bufferPool = new BufferPool();
+
     private float32BufferPool = new BufferPoolView(this.bufferPool, Float32Array);
 
-    private programs: Record<string, ProgramCall> = {};
-    private batchedPrograms: number[][] = [];
+    private programs: Record<string, ProgramCall<any>> = {};
 
     public constructor(public context: RenderContext) {
     }
 
-    public program(program: ProgramRef, data: number[]) {
+    public program<P extends ProgramDefinition>(
+        program: ProgramRef<P>,
+        attributes: Required<Record<keyof P['attributes'], number[]>>
+    ) {
+
         const ID = `${program.id}`;
 
         const batch = this.programs[ID];
@@ -32,35 +38,40 @@ export class DrawCallBatch {
         if (!batch) {
             this.programs[ID] = {
                 program,
-                triangles: [data],
-                trianglesLength: data.length
+                attributes: [attributes],
             };
 
             return;
         }
 
-        batch.triangles.push(data);
-        batch.trianglesLength += data.length;
+        batch.attributes.push(attributes);
     }
 
     public submit(instructor: Instructor) {
-        for (const {program, triangles, trianglesLength} of Object.values(this.programs)) {
-            const {
-                buffer,
-                byteOffset,
-            } = this.float32BufferPool.writeMultiData(triangles, trianglesLength);
+        for (const {program, attributes} of Object.values(this.programs)) {
+            this.context.addResource(program);
+            this.context.addResource(buffer);
 
-            instructor.command(RunProgram, {
+            /*instructor.command(RunProgram, {
                 program,
                 buffer,
                 offset: byteOffset,
                 length: trianglesLength
-            });
+            });*/
         }
+
+        this.programs = {};
+    }
+
+    private buildAttributes(def: ProgramDefinition, attributes: Record<string, number[]>) {
+        const ;
+
+        for (
+
     }
 }
 
-const BUFFER_SIZE = 1024;
+const BUFFER_SIZE = 128;
 
 class BufferPoolView {
     private currentBuffer: BufferRef;
@@ -141,6 +152,7 @@ class BufferPool {
         if (nextOffset > this.currentBuffer.size) {
             if (this.currentBufferOffset === 0) {
                 // We didn't use this buffer. Replace it with one that fits.
+                this.buffers.push(this.currentBuffer);
                 this.currentBuffer = new BufferRef(new ArrayBuffer(Math.max(BUFFER_SIZE, amount)));
                 this.buffers[this.buffersIndex] = this.currentBuffer;
             } else {

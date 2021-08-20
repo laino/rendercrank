@@ -1,4 +1,11 @@
-import { ArrayBufferProtocolWriter, ArrayBufferProtocolReader, CanvasRenderer, Instructor } from './core';
+import {
+    ArrayBufferProtocolWriter,
+    ArrayBufferProtocolReader,
+    CanvasRenderer,
+    Instructor,
+    RenderContext
+} from './core';
+
 import { Component } from './component';
 import { RenderTarget } from './render-target';
 
@@ -21,6 +28,7 @@ export class SingleThreadedCanvasRenderer extends CanvasRenderer {
         instructor.writeCommandMap();
 
         component.render(target);
+
         target.submit(instructor);
 
         instructor.finish();
@@ -30,16 +38,20 @@ export class SingleThreadedCanvasRenderer extends CanvasRenderer {
         this.render(reader);
     }
 
-    public unloadComponent(component: Component) {
+    public unload(context: RenderContext) {
         const writer = this.protocolWriter;
         const reader = this.protocolReader;
 
-        component.unload(this.instructor);
+        context.unload(this.instructor);
 
         const data = writer.flush();
 
         reader.receive(data);
 
         this.render(reader);
+    }
+
+    public reset() {
+        this.unload(this.renderTarget);
     }
 }
