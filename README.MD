@@ -51,3 +51,19 @@ console.log(scene.resources); // Set [ ProgramRef, BufferRef, ... ]
 // Unreferences all resources used by the component and possibly unloads them:
 renderer.unloadComponent(scene);
 ```
+
+Contributing
+------------
+
+```bash
+# Checkout
+git clone https://github.com/laino/rendercrank.git
+cd rendercrank
+yarn install
+yarn build
+
+# Watch and automatically rebuild
+yarn watch
+```
+
+Open ``examples/rectangle/index.html`` in a browser of your choice - it should work.
