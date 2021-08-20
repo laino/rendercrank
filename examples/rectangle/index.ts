@@ -11,8 +11,6 @@ const scene = new Component((t) => {
     t.rect(200, 200, 400, 400);
 });
 
-// Render the component
 renderer.renderComponent(scene);
 
-// Unreference and unload resources
 renderer.unloadComponent(scene);

@@ -60,6 +60,8 @@ export class ProgramRef extends ResourceRef {
 }
 
 export class Program extends Resource {
+    static resourceName = 'Program';
+
     private attributes: Attribute[];
     private uniforms: Uniform[];
 

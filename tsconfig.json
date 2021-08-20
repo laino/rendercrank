@@ -4,12 +4,15 @@
       "index.ts"
   ],
   "exclude": [
+    "examples",
     "node_modules",
     "**/node_modules/*"
   ],
   "compilerOptions": {
-    "outDir": "build",
+    "outDir": "build/src",
     "sourceMap": true,
+    "composite": true,
+    "declaration": true,
     "module": "es6",
     "target": "es5",
     "moduleResolution": "node",

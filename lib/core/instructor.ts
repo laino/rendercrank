@@ -91,7 +91,7 @@ export class Instructor {
         if (resource.state === ResourceState.LOADED) {
             protocol.writeUInt8(Instruction.LOAD_RESOURCE);
             protocol.writeUInt32(resource.id);
-            protocol.writeString(resource.type.name);
+            protocol.writeString(resource.type.resourceName);
             resource.writeData(protocol);
 
             resource.state = ResourceState.READY;

@@ -4,11 +4,17 @@ import { Renderer } from './renderer';
 export const RESOURCE_MAP: Record<string, typeof Resource> = {};
 
 export function registerResourceType(resource: typeof Resource) {
-    if (Object.prototype.hasOwnProperty.call(RESOURCE_MAP, resource.name)) {
-        throw new Error(`A resource type with the name ${resource.name} is already registered.`);
+    const name = resource.resourceName;
+
+    if (name === 'Resource') {
+        throw new Error(`Resource name can't be "Resource".`);
     }
 
-    RESOURCE_MAP[resource.name] = resource;
+    if (Object.prototype.hasOwnProperty.call(RESOURCE_MAP, name)) {
+        throw new Error(`A resource type with the name ${name} is already registered.`);
+    }
+
+    RESOURCE_MAP[name] = resource;
 }
 
 export enum ResourceState {
@@ -57,6 +63,8 @@ export abstract class ResourceRef {
 }
 
 export abstract class Resource {
+    static readonly resourceName: string = 'Resource';
+
     public constructor(public renderer: Renderer) {
     }
 

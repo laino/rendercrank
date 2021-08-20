@@ -1,9 +1,12 @@
 {
   "include": ["**/*.ts"],
-  "exclude": ["../index.ts", "../lib/**/*.ts"],
+  "references": [
+      { "path": "../" }
+  ],
   "compilerOptions": {
     "module": "es6",
     "target": "es5",
+    "sourceMap": true,
     "moduleResolution": "node",
     "downlevelIteration": true
   }

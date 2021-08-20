@@ -3,9 +3,15 @@ const webpack = require('webpack');
 
 const mode = process.env['NODE_ENV'] || 'development';
 
+const devtool = {
+    'development': 'eval',
+    'production': 'source-map'
+}[mode];
+
 module.exports = {
     entry: './index.ts',
     mode,
+    devtool,
     module: {
         rules: [
             {

@@ -85,6 +85,8 @@ export class BufferRef extends ResourceRef {
 }
 
 export class Buffer extends Resource {
+    static resourceName = 'Buffer';
+
     public buffer: WebGLBuffer;
 
     private sharedBuffer: Uint8Array;

@@ -6,8 +6,9 @@ import { RenderContext } from './render-context';
 export type RenderFunction = (target: RenderTarget) => Promise<void> | void;
 
 export class Component extends RenderContext {
-    private resources = new Set<ResourceRef>();
     private renderTarget = new RenderTarget(this);
+
+    public resources = new Set<ResourceRef>();
 
     public constructor(public fn: RenderFunction) {
         super();
