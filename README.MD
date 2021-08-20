@@ -23,7 +23,7 @@ Example
 -------
 
 ```ts
-import { SingleThreadedCanvasRenderer, Component } from 'rendercrank';
+import { SingleThreadedCanvasRenderer, component } from 'rendercrank';
 
 // Create a Canvas
 const canvas = document.createElement('canvas');
@@ -36,20 +36,18 @@ const renderer = new SingleThreadedCanvasRenderer(canvas);
 
 // Components wrap functions that draw something and automatically
 // keep track of (and reference) resources used within them:
-const scene = new Component((target) => {
-    target.rect(200, 200, 400, 400);
-});
+const rectangle = component(t => t.rect(200, 200, 400, 400));
 
 // Render the component:
-renderer.renderComponent(scene);
+renderer.renderComponent(rectangle);
 
 // All resources allocated to run the draw calls:
-console.log(scene.resources); // Set [ ProgramRef, BufferRef, ... ]
+console.log(rectangle.resources); // Set [ ProgramRef, BufferRef, ... ]
 
 // When you are not going to render some component in the near future,
 // it may be wise to release resources used by it.
 // Unreferences all resources used by the component and possibly unloads them:
-renderer.unloadComponent(scene);
+renderer.unloadComponent(rectangle);
 ```
 
 Contributing
@@ -66,4 +64,4 @@ yarn build
 yarn watch
 ```
 
-Open ``examples/rectangle/index.html`` in a browser of your choice - it should work.
+Open ``examples/rectangle/index.html`` in a browser of your choice - it should work!

@@ -1,4 +1,4 @@
-const { Component, SingleThreadedCanvasRenderer } = RenderCrank;
+const { component, SingleThreadedCanvasRenderer } = RenderCrank;
 
 const canvas = document.createElement('canvas');
 canvas.width = window.innerWidth;
@@ -7,10 +7,7 @@ document.body.appendChild(canvas);
 
 const renderer = new SingleThreadedCanvasRenderer(canvas);
 
-const scene = new Component((t) => {
-    t.rect(200, 200, 400, 400);
-});
+const rectangle = component(t => t.rect(200, 200, 400, 400));
 
-renderer.renderComponent(scene);
-
-renderer.unloadComponent(scene);
+renderer.renderComponent(rectangle);
+renderer.unloadComponent(rectangle);

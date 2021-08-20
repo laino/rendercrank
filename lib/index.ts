@@ -3,9 +3,7 @@ export * from './resources';
 export * from './commands';
 
 export * from './render-target';
-export * from './render-context';
 export * from './component';
-
 export * from './single-threaded-renderer';
 
 import { registerResourceType } from './core';

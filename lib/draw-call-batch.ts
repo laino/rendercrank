@@ -1,24 +1,63 @@
+import { Instructor, RenderContext } from './core';
+import { RunProgram } from './commands';
+
 import {
+    ProgramRef,
     BufferRef,
     ArrayBufferViewLike,
     ArrayBufferViewLikeType
 } from './resources';
 
-let CONTEXT_ID_COUNTER = 0;
-
-export type RenderContextID = number;
-export namespace RenderContextID {
-    export function nextID(): RenderContextID {
-        return CONTEXT_ID_COUNTER++;
-    }
+interface ProgramCall {
+    program: ProgramRef,
+    triangles: number[][],
+    trianglesLength: number
 }
 
-export class RenderContext {
-    public readonly id: RenderContextID = RenderContextID.nextID();
+export class DrawCallBatch {
+    private bufferPool = new BufferPool();
+    private float32BufferPool = new BufferPoolView(this.bufferPool, Float32Array);
 
-    public bufferPool = new BufferPool(this);
+    private programs: Record<string, ProgramCall> = {};
+    private batchedPrograms: number[][] = [];
 
-    public float32BufferPool = new BufferPoolView(this.bufferPool, Float32Array);
+    public constructor(public context: RenderContext) {
+    }
+
+    public program(program: ProgramRef, data: number[]) {
+        const ID = `${program.id}`;
+
+        const batch = this.programs[ID];
+
+        if (!batch) {
+            this.programs[ID] = {
+                program,
+                triangles: [data],
+                trianglesLength: data.length
+            };
+
+            return;
+        }
+
+        batch.triangles.push(data);
+        batch.trianglesLength += data.length;
+    }
+
+    public submit(instructor: Instructor) {
+        for (const {program, triangles, trianglesLength} of Object.values(this.programs)) {
+            const {
+                buffer,
+                byteOffset,
+            } = this.float32BufferPool.writeMultiData(triangles, trianglesLength);
+
+            instructor.command(RunProgram, {
+                program,
+                buffer,
+                offset: byteOffset,
+                length: trianglesLength
+            });
+        }
+    }
 }
 
 const BUFFER_SIZE = 1024;
@@ -85,9 +124,6 @@ class BufferPool {
 
     public currentBuffer: BufferRef;
     public currentBufferOffset = 0;
-
-    public constructor(public context: RenderContext) {
-    }
 
     public reset() {
         this.buffersIndex = 0;

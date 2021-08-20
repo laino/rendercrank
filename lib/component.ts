@@ -1,42 +1,28 @@
-import { ProtocolWriter, Instructor, ResourceRef } from './core';
-
+import { RenderContext, Instructor } from './core';
 import { RenderTarget } from './render-target';
-import { RenderContext } from './render-context';
+import { DrawCallBatch } from './draw-call-batch';
 
-export type RenderFunction = (target: RenderTarget) => Promise<void> | void;
+export abstract class Component extends RenderContext {
+    private batch = new DrawCallBatch(this);
 
-export class Component extends RenderContext {
-    private renderTarget = new RenderTarget(this);
-
-    public resources = new Set<ResourceRef>();
-
-    public constructor(public fn: RenderFunction) {
+    public constructor() {
         super();
     }
 
-    public render(protocol: ProtocolWriter) {
-        this.fn(this.renderTarget);
-
-        const instructor = new Instructor(protocol);
-
-        this.renderTarget.submit(instructor);
-
-        for (const resource of instructor.resources) {
-            resource.refcount++;
-            this.resources.add(resource);
-        }
-
-        instructor.finish();
+    public render(target: RenderTarget) {
+        target.pushBatch(this.batch);
+        this._render(target);
+        target.popBatch();
     }
 
-    public unload(protocol: ProtocolWriter) {
-        const instructor = new Instructor(protocol);
-
-        for (const resource of this.resources) {
-            resource.refcount--;
-            instructor.unloadResource(resource);
-        }
-
-        instructor.finish();
-    }
+    protected abstract _render(target: RenderTarget);
 }
+
+export type RenderFunction = (target: RenderTarget) => void;
+
+export function component(render: RenderFunction) {
+    const component = new (Component as any)();
+    component._render = render;
+    return component as Component;
+}
+
