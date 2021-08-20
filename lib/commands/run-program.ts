@@ -1,17 +1,24 @@
-import { Protocol, Renderer, Command, Instructor } from '../core';
+import { ProtocolWriter, ProtocolReader, Renderer, Command, Instructor } from '../core';
 import { ProgramRef, BufferRef, Program, Buffer } from '../resources';
 
 export const RunProgram: Command = {
     name: 'RunProgram',
 
-    submit(instructor: Instructor, program: ProgramRef, buffer: BufferRef, offset: number, length: number) {
+    submit(
+            instructor: Instructor,
+            protocol: ProtocolWriter,
+            program: ProgramRef,
+            buffer: BufferRef,
+            offset: number,
+            length: number
+    ) {
         instructor.loadResource(program);
         instructor.loadResource(buffer);
 
-        return protocol => protocol.writeUInt32Array([program.id, buffer.id, offset, length]);
+        protocol.writeUInt32Array([program.id, buffer.id, offset, length]);
     },
 
-    render(protocol: Protocol, renderer: Renderer) {
+    render(protocol: ProtocolReader, renderer: Renderer) {
         const [
             programId,
             bufferId,

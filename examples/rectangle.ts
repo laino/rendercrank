@@ -1,4 +1,4 @@
-const { CanvasRenderer, RenderTarget, Component, ArrayBufferProtocol } = RenderCrank;
+const { Component, SingleThreadedCanvasRenderer } = RenderCrank;
 
 const canvas = document.createElement('canvas');
 
@@ -7,20 +7,10 @@ canvas.height = window.innerHeight;
 
 document.body.appendChild(canvas);
 
+const renderer = new SingleThreadedCanvasRenderer(canvas);
+
 const scene = new Component((t) => {
     t.rect(200, 200, 400, 400);
 });
 
-const sender = new ArrayBufferProtocol();
-
-scene.render(sender);
-
-const drawCalls = sender.send();
-
-const receiver = new ArrayBufferProtocol();
-
-receiver.receive(drawCalls);
-
-const renderer = new CanvasRenderer(canvas);
-
-renderer.render(receiver);
+renderer.renderComponent(scene);

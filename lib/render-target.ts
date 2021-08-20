@@ -1,4 +1,4 @@
-import { Instructor, ResourceRef, ResourceState } from './core';
+import { Instructor } from './core';
 import { RenderContext } from './render-context';
 
 import { ProgramRef } from './resources';

@@ -1,4 +1,4 @@
-import { Protocol } from './protocol';
+import { ProtocolWriter } from './protocol';
 import { ResourceRef, ResourceState } from './resource';
 import { Command, CommandArguments, COMMAND_MAP } from './command';
 
@@ -8,7 +8,8 @@ export enum Instruction {
     MAP_COMMAND,
     UPDATE_RESOURCE,
     LOAD_RESOURCE,
-    UNLOAD_RESOURCE
+    UNLOAD_RESOURCE,
+    ADVANCE
 }
 
 export class Instructor {
@@ -16,7 +17,9 @@ export class Instructor {
 
     public resources = new Set<ResourceRef>();
 
-    public constructor(private protocol: Protocol) {
+    private commandProtocol: ProtocolWriter;
+
+    public constructor(private protocol: ProtocolWriter) {
         let index = 0;
 
         for (const command of Object.values(COMMAND_MAP)) {
@@ -28,16 +31,31 @@ export class Instructor {
 
             index++;
         }
+
+        this.commandProtocol = protocol.createWriter();
     }
 
     public command<C extends Command>(command: C, ... args: CommandArguments<C>) {
+        const commandProtocol = this.commandProtocol;
+
+        commandProtocol.writeUInt8(Instruction.RUN_COMMAND);
+
+        command.submit(this, commandProtocol, ...args);
+    }
+
+    public finish() {
+        this.commandProtocol.writeUInt8(Instruction.STOP);
+
+        const commandData = this.commandProtocol.flush();
         const protocol = this.protocol;
 
-        const fn = command.submit(this, ...args);
+        protocol.writeUInt8(Instruction.ADVANCE);
 
-        protocol.writeUInt8(Instruction.RUN_COMMAND);
+        protocol.advance();
 
-        fn(protocol);
+        for (const data of commandData) {
+            protocol.passData(data);
+        }
     }
 
     public loadResource(resource: ResourceRef) {
@@ -103,10 +121,6 @@ export class Instructor {
         }
 
         resource.state = ResourceState.UNLOADED;
-    }
-
-    public finish() {
-        this.protocol.writeUInt8(0);
     }
 
 }

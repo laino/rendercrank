@@ -1,31 +1,24 @@
-
 const DEFAULT_BUFFER_SIZE = 1024;
 const MAX_INLINE_STRING_LENGTH = 128;
 
 const IS_LITTLE_ENDIAN =
     ((new Uint32Array((new Uint8Array([1,2,3,4])).buffer))[0] === 0x04030201);
 
-// Abstracted out to make implementing SharedArrayBuffer easily
-export abstract class Protocol {
+export abstract class ProtocolWriter {
     private textEncoder = new TextEncoder();
-    private textDecoder = new TextDecoder('utf8');
 
     protected writeBuffer: ArrayBuffer;
     protected writeView: DataView;
     protected writeOffset: number;
 
-    protected readBuffer: ArrayBuffer;
-    protected readView: DataView;
-    protected readOffset: number;
-
-    public constructor(public readonly shared = true) {
-    }
+    public constructor(public readonly shared = false) {}
 
     protected abstract allocate(amount: number, align: number): number;
-    protected abstract prepareRead(amount: number, align: number): number;
 
+    public abstract createWriter(): ProtocolWriter;
+    public abstract advance();
     public abstract passData(data: ArrayBufferLike);
-    public abstract getData(): ArrayBufferLike;
+    public abstract flush(): ArrayBuffer[];
 
     public writeString(str: string) {
         const encoded = this.textEncoder.encode(str);
@@ -37,20 +30,6 @@ export abstract class Protocol {
         } else {
             this.writeUInt8Array(encoded);
         }
-    }
-
-    public readString() {
-        const length = this.readUInt32();
-
-        let data: ArrayBuffer;
-
-        if (length > MAX_INLINE_STRING_LENGTH) {
-            data = this.getData();
-        } else {
-            data = this.readUInt8Array(length);
-        }
-
-        return this.textDecoder.decode(data);
     }
 
     public writeFloat32(num: number) {
@@ -95,43 +74,74 @@ export abstract class Protocol {
 
     public writeFloat32Array(arr: ArrayLike<number>) {
         const offset = this.allocate(arr.length * 4, 4);
-        new Float32Array(this.writeBuffer).set(arr, offset / 4)
+        new Float32Array(this.writeBuffer).set(arr, offset / 4);
     }
 
     public writeFloat64Array(arr: ArrayLike<number>) {
         const offset = this.allocate(arr.length * 8, 8);
-        new Float64Array(this.writeBuffer).set(arr, offset / 8)
+        new Float64Array(this.writeBuffer).set(arr, offset / 8);
     }
 
     public writeInt8Array(arr: ArrayLike<number>) {
         const offset = this.allocate(arr.length, 1);
-        new Int8Array(this.writeBuffer).set(arr, offset)
+        new Int8Array(this.writeBuffer).set(arr, offset);
     }
 
     public writeInt16Array(arr: ArrayLike<number>) {
         const offset = this.allocate(arr.length * 2, 2);
-        new Int16Array(this.writeBuffer).set(arr, offset / 2)
+        new Int16Array(this.writeBuffer).set(arr, offset / 2);
     }
 
     public writeInt32Array(arr: ArrayLike<number>) {
         const offset = this.allocate(arr.length * 4, 4);
-        new Int32Array(this.writeBuffer).set(arr, offset / 4)
+        new Int32Array(this.writeBuffer).set(arr, offset / 4);
     }
 
     public writeUInt8Array(arr: ArrayLike<number>) {
         const offset = this.allocate(arr.length, 1);
-        new Uint8Array(this.writeBuffer).set(arr, offset)
+        new Uint8Array(this.writeBuffer).set(arr, offset);
     }
 
     public writeUInt16Array(arr: ArrayLike<number>) {
         const offset = this.allocate(arr.length * 2, 2);
-        new Uint16Array(this.writeBuffer).set(arr, offset / 2)
+        new Uint16Array(this.writeBuffer).set(arr, offset / 2);
     }
 
     public writeUInt32Array(arr: ArrayLike<number>) {
         const offset = this.allocate(arr.length * 4, 4);
-        new Uint32Array(this.writeBuffer).set(arr, offset / 4)
+        new Uint32Array(this.writeBuffer).set(arr, offset / 4);
     }
+}
+
+export abstract class ProtocolReader {
+    private textDecoder = new TextDecoder('utf8');
+
+    protected readBuffer: ArrayBuffer;
+    protected readView: DataView;
+    protected readOffset: number;
+
+    public constructor(public readonly shared = false) {
+    }
+
+    protected abstract prepareRead(amount: number, align: number): number;
+
+    public abstract getData(): ArrayBufferLike;
+    public abstract advance();
+
+    public readString() {
+        const length = this.readUInt32();
+
+        let data: ArrayBuffer;
+
+        if (length > MAX_INLINE_STRING_LENGTH) {
+            data = this.getData();
+        } else {
+            data = this.readUInt8Array(length);
+        }
+
+        return this.textDecoder.decode(data);
+    }
+
 
     public readFloat32() {
         const offset = this.prepareRead(4, 4);
@@ -214,31 +224,73 @@ export abstract class Protocol {
     }
 }
 
-export class ArrayBufferProtocol extends Protocol {
+class ProtocolBufferAllocator {
+    private buffers: ArrayBuffer[] = [];
+    private bufferIndex = -1;
+
+    public allocate(amount: number) {
+        this.bufferIndex++;
+
+        if (this.bufferIndex === this.buffers.length) {
+            const buffer = new ArrayBuffer(Math.max(amount, DEFAULT_BUFFER_SIZE));
+            this.buffers.push(buffer);
+            return buffer;
+        }
+
+        let buffer = this.buffers[this.bufferIndex];
+
+        if (buffer.byteLength < amount) {
+            this.buffers.push(buffer);
+
+            buffer = new ArrayBuffer(amount);
+
+            this.buffers[this.bufferIndex] = buffer;
+        }
+
+        return buffer;
+    }
+
+    public return(arr: ArrayBuffer[]) {
+        this.buffers.push(...arr);
+    }
+
+    public reset() {
+        this.buffers = [];
+        this.bufferIndex = 0;
+    }
+}
+
+export class ArrayBufferProtocolWriter extends ProtocolWriter {
     private writeBuffers: ArrayBuffer[] = [];
 
     protected writeBuffer: ArrayBuffer;
     protected writeView: DataView;
     protected writeOffset = 0;
 
-    private readBuffers: ArrayBuffer[] = [];
-    private readBufferIndex = 0;
+    public constructor(
+            shared = false,
+            private allocator: ProtocolBufferAllocator = new ProtocolBufferAllocator(),
+    ) {
+        super(shared);
+    }
 
-    protected readBuffer: ArrayBuffer;
-    protected readView: DataView;
-    protected readOffset = 0;
+    public advance() {
+        this.writeBuffer = null;
+        this.writeView = null;
+        this.writeOffset = 0;
+    }
 
     public passData(data: ArrayBuffer) {
         this.writeBuffers.push(data);
     }
 
-    public getData() {
-        return this.readBuffers[++this.readBufferIndex];
+    public createWriter() {
+        return new ArrayBufferProtocolWriter(this.shared, this.allocator);
     }
 
     protected allocate(amount: number, align: number): number {
         if (!this.writeBuffer) {
-            this.writeBuffer = new ArrayBuffer(Math.max(amount, DEFAULT_BUFFER_SIZE));
+            this.writeBuffer = this.allocator.allocate(amount);
             this.writeView = new DataView(this.writeBuffer);
             this.writeBuffers.push(this.writeBuffer);
             this.writeOffset = amount;
@@ -254,15 +306,43 @@ export class ArrayBufferProtocol extends Protocol {
         const newOffset = offset + amount;
 
         if (newOffset > this.writeBuffer.byteLength) {
-            this.writeBuffer = null;
-            this.writeView = null;
-            this.writeOffset = 0;
+            this.advance();
             return this.allocate(amount, align);
         }
 
         this.writeOffset = newOffset;
 
         return offset;
+    }
+
+    public flush() {
+        const oldBuffers = this.writeBuffers;
+
+        this.writeBuffer = null;
+        this.writeView = null;
+        this.writeOffset = 0;
+        this.writeBuffers = [];
+
+        return oldBuffers;
+    }
+}
+
+export class ArrayBufferProtocolReader extends ProtocolReader {
+    private readBuffers: ArrayBuffer[] = [];
+    private readBufferIndex = 0;
+
+    protected readBuffer: ArrayBuffer;
+    protected readView: DataView;
+    protected readOffset = 0;
+
+    public getData() {
+        return this.readBuffers[++this.readBufferIndex];
+    }
+
+    public advance() {
+        this.readBuffer = this.readBuffers[++this.readBufferIndex];
+        this.readView = new DataView(this.readBuffer);
+        this.readOffset = 0;
     }
 
     protected prepareRead(amount: number, align: number): number {
@@ -275,9 +355,7 @@ export class ArrayBufferProtocol extends Protocol {
         const newOffset = offset + amount;
 
         if (newOffset > this.readBuffer.byteLength) {
-            this.readBuffer = this.readBuffers[++this.readBufferIndex];
-            this.readView = new DataView(this.readBuffer);
-            this.readOffset = 0;
+            this.advance();
             return this.prepareRead(amount, align);
         }
 
@@ -296,17 +374,6 @@ export class ArrayBufferProtocol extends Protocol {
 
         this.readView = this.readBuffer ? new DataView(this.readBuffer) : null;
         this.readOffset = 0;
-
-        return oldBuffers;
-    }
-
-    public send() {
-        const oldBuffers = this.writeBuffers;
-
-        this.writeBuffer = null;
-        this.writeView = null;
-        this.writeOffset = 0;
-        this.writeBuffers = [];
 
         return oldBuffers;
     }

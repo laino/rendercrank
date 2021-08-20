@@ -1,4 +1,4 @@
-import { Protocol } from './protocol';
+import { ProtocolReader, ProtocolWriter } from './protocol';
 import { Renderer } from './renderer';
 
 export const RESOURCE_MAP: Record<string, typeof Resource> = {};
@@ -42,11 +42,11 @@ export abstract class ResourceRef {
         // overwrite
     }
 
-    public writeData(protocol: Protocol) {
+    public writeData(protocol: ProtocolWriter) {
         // overwrite
     }
 
-    public writeUpdate(protocol: Protocol) {
+    public writeUpdate(protocol: ProtocolWriter) {
         // overwrite
     }
 
@@ -60,7 +60,7 @@ export abstract class Resource {
     public constructor(public renderer: Renderer) {
     }
 
-    public abstract load(protocol: Protocol);
-    public abstract update(protocol: Protocol);
+    public abstract load(protocol: ProtocolReader);
+    public abstract update(protocol: ProtocolReader);
     public abstract unload();
 }

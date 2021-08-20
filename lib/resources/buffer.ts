@@ -1,4 +1,4 @@
-import { Protocol, Resource, ResourceRef } from '../core';
+import { ProtocolReader, ProtocolWriter, Resource, ResourceRef } from '../core';
 
 interface VertexBufferUpdate {
     offset: number,
@@ -48,7 +48,7 @@ export class BufferRef extends ResourceRef {
         this.needsUpdate = true;
     }
 
-    public writeData(protocol: Protocol) {
+    public writeData(protocol: ProtocolWriter) {
         if (this.isShared || protocol.shared) {
             protocol.writeUInt8(1);
             protocol.passData(this.buffer);
@@ -59,7 +59,7 @@ export class BufferRef extends ResourceRef {
         }
     }
 
-    public writeUpdate(protocol: Protocol) {
+    public writeUpdate(protocol: ProtocolWriter) {
         const updates = this.updates;
 
         protocol.writeUInt32(updates.length);
@@ -89,7 +89,7 @@ export class Buffer extends Resource {
 
     private sharedBuffer: Uint8Array;
 
-    public load(protocol: Protocol) {
+    public load(protocol: ProtocolReader) {
         let data: Uint8Array;
 
         const isShared = !!protocol.readUInt8();
@@ -112,7 +112,7 @@ export class Buffer extends Resource {
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
     }
 
-    public update(protocol: Protocol) {
+    public update(protocol: ProtocolReader) {
         const gl = this.renderer.gl;
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);

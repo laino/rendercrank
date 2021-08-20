@@ -1,7 +1,7 @@
-import { Protocol } from './protocol';
 import { Command, COMMAND_MAP } from './command';
 import { Resource, ResourceID, RESOURCE_MAP } from './resource';
 import { Instruction } from './instructor';
+import { ProtocolReader } from './protocol';
 
 const DEBUG = true;
 
@@ -10,7 +10,7 @@ export interface Renderer {
 
     getResource<T extends typeof Resource>(id: ResourceID, type: T): InstanceType<T>;
 
-    render(protocol: Protocol);
+    render(protocol: ProtocolReader);
 }
 
 export class CanvasRenderer implements Renderer {
@@ -38,7 +38,7 @@ export class CanvasRenderer implements Renderer {
         return resource as InstanceType<T>;
     }
 
-    public render(protocol: Protocol) {
+    public render(protocol: ProtocolReader) {
         const resources = this.resources;
 
         const commandMap: Command[] = Array(256);
@@ -102,7 +102,11 @@ export class CanvasRenderer implements Renderer {
 
                 continue;
             }
+
+            if (action === Instruction.ADVANCE) {
+                protocol.advance();
+                continue;
+            }
         }
     }
 }
-

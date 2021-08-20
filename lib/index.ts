@@ -6,6 +6,8 @@ export * from './render-target';
 export * from './render-context';
 export * from './component';
 
+export * from './single-threaded-renderer';
+
 import { registerResourceType, registerCommand } from './core';
 import { Program, Buffer } from './resources';
 import { RunProgram } from './commands';

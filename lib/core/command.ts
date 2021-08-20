@@ -1,18 +1,18 @@
 import { Renderer } from './renderer';
-import { Protocol } from './protocol';
+import { ProtocolReader, ProtocolWriter } from './protocol';
 import { Instructor } from './instructor';
 
 export const COMMAND_MAP: Record<string, Command> = {};
 
 export type CommandArguments<C extends Command> =
-    C extends { submit(instructor: Instructor, ... args: infer A): (protocol: Protocol) => void  } ? A : never;
+    C extends { submit(instructor: Instructor, protocol: ProtocolWriter, ... args: infer A): void } ? A : never;
 
 export interface Command {
     name: string;
 
-    submit(instructor: Instructor, ... args: any[]): (protocol: Protocol) => void;
+    submit(instructor: Instructor, protocol: ProtocolWriter, ... args: any[]): void;
 
-    render(protocol: Protocol, renderer: Renderer);
+    render(protocol: ProtocolReader, renderer: Renderer);
 }
 
 export function registerCommand(command: Command) {

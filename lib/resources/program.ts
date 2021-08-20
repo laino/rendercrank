@@ -1,4 +1,4 @@
-import { Protocol, Resource, ResourceRef } from '../core';
+import { Resource, ResourceRef, ProtocolReader, ProtocolWriter } from '../core';
 
 const PREAMBLE = "#version 300 es\nprecision highp float;\n";
 
@@ -54,7 +54,7 @@ export class ProgramRef extends ResourceRef {
         super(Program);
     }
 
-    public writeData(protocol: Protocol) {
+    public writeData(protocol: ProtocolWriter) {
         protocol.writeString(JSON.stringify(this.def));
     }
 }
@@ -67,7 +67,7 @@ export class Program extends Resource {
     private fragmentShader: WebGLShader;
     private program: WebGLProgram;
 
-    public load(protocol: Protocol) {
+    public load(protocol: ProtocolReader) {
         const def: ProgramDefinition = JSON.parse(protocol.readString());
 
         const gl = this.renderer.gl;
