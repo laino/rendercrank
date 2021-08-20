@@ -59,7 +59,7 @@ declare module "core/protocol" {
     }
     class ProtocolBufferAllocator {
         private buffers;
-        private nextBufferIndex;
+        private bufferIndex;
         allocate(amount: number): ArrayBuffer;
         return(arr: ArrayBuffer[]): void;
         reset(): void;
