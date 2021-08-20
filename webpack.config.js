@@ -1,7 +1,9 @@
 const path = require('path');
+const webpack = require('webpack');
 
 module.exports = {
     entry: './lib/index.ts',
+    mode: 'development',
     module: {
         rules: [
             {
@@ -21,5 +23,5 @@ module.exports = {
             name: 'RenderCrank',
             type: 'umd'
         }
-    },
+    }
 };

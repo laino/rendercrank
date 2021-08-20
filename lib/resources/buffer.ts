@@ -1,5 +1,4 @@
-import { Resource, ResourceRef } from './resource';
-import { Protocol } from '../core';
+import { Protocol, Resource, ResourceRef } from '../core';
 
 interface VertexBufferUpdate {
     offset: number,
@@ -25,14 +24,17 @@ export class BufferRef extends ResourceRef {
 
     private byteView: Uint8Array;
 
-    private isShared: boolean;
+    private isShared = false;
 
     public readonly size: number;
 
     public constructor(public buffer: ArrayBuffer) {
         super(Buffer);
 
-        this.isShared = buffer instanceof SharedArrayBuffer;
+        if (window.SharedArrayBuffer) {
+            this.isShared = buffer instanceof SharedArrayBuffer;
+        }
+
         this.byteView = new Uint8Array(buffer);
         this.size = buffer.byteLength;
     }
@@ -47,7 +49,7 @@ export class BufferRef extends ResourceRef {
     }
 
     public writeData(protocol: Protocol) {
-        if (this.isShared) {
+        if (this.isShared || protocol.shared) {
             protocol.writeUInt8(1);
             protocol.passData(this.buffer);
         } else {
@@ -68,7 +70,7 @@ export class BufferRef extends ResourceRef {
             protocol.writeUInt32(offset);
             protocol.writeUInt32(length);
 
-            if (this.isShared) {
+            if (this.isShared || protocol.shared) {
                 protocol.writeUInt8Array(this.byteView.subarray(offset, offset + length));
             }
         }

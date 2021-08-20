@@ -1,7 +1,7 @@
 {
-  "include": ["lib/**/*.ts"],
+  "include": ["**/*.ts"],
+  "exclude": ["../index.ts", "../lib/**/*.ts"],
   "compilerOptions": {
-    "outDir": "./build/",
     "module": "es6",
     "target": "es5",
     "moduleResolution": "node",

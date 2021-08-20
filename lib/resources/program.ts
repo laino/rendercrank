@@ -1,5 +1,4 @@
-import { Resource, ResourceRef } from './resource';
-import { Renderer, Protocol } from '../core';
+import { Protocol, Resource, ResourceRef } from '../core';
 
 const PREAMBLE = "#version 300 es\nprecision highp float;\n";
 
@@ -68,17 +67,16 @@ export class Program extends Resource {
     private fragmentShader: WebGLShader;
     private program: WebGLProgram;
 
-    public constructor(renderer: Renderer) {
-        super(renderer);
-    }
-
     public load(protocol: Protocol) {
         const def: ProgramDefinition = JSON.parse(protocol.readString());
 
         const gl = this.renderer.gl;
 
-        const vertexShaderSource = createVertexShaderCode(def.vertexShader, def.attributes, def.uniforms);
-        const fragmentShaderSource = createFragmentShaderCode(def.fragmentShader, def.uniforms);
+        const attributes = def.attributes || {};
+        const uniforms = def.uniforms || {};
+
+        const vertexShaderSource = createVertexShaderCode(def.vertexShader, attributes, uniforms);
+        const fragmentShaderSource = createFragmentShaderCode(def.fragmentShader, uniforms);
 
         const vertexShader = this.vertexShader = gl.createShader(gl.VERTEX_SHADER);
 
@@ -109,7 +107,7 @@ export class Program extends Resource {
             throw new Error(gl.getProgramInfoLog(program));
         }
 
-        this.attributes = Object.entries(def.attributes).map(([name, type]) => {
+        this.attributes = Object.entries(attributes).map(([name, type]) => {
             return {
                 name,
                 type,
@@ -117,7 +115,7 @@ export class Program extends Resource {
             };
         });
 
-        this.uniforms = Object.entries(def.uniforms).map(([name, type]) => {
+        this.uniforms = Object.entries(uniforms).map(([name, type]) => {
             return {
                 name,
                 type,
@@ -180,7 +178,7 @@ function fixIndent(body: string) {
 
     for (const line of lines) {
         const match = line.match(firstCharRegExp);
-        const lineStart = match ? match.index : match.length;
+        const lineStart = match ? match.index : line.length;
 
         minIndent = Math.min(minIndent, lineStart);
     }

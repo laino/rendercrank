@@ -1,8 +1,20 @@
-import { Renderer, Protocol } from '../core';
+import { Protocol } from './protocol';
+import { Renderer } from './renderer';
+
+export const RESOURCE_MAP: Record<string, typeof Resource> = {};
+
+export function registerResourceType(resource: typeof Resource) {
+    if (Object.prototype.hasOwnProperty.call(RESOURCE_MAP, resource.name)) {
+        throw new Error(`A resource type with the name ${resource.name} is already registered.`);
+    }
+
+    RESOURCE_MAP[resource.name] = resource;
+}
 
 export enum ResourceState {
     UNLOADED,
     LOADING,
+    LOAD_ABORTED,
     LOADED,
     READY,
 }
@@ -20,7 +32,7 @@ export abstract class ResourceRef {
     public readonly id: ResourceID = ResourceID.nextID();
 
     public state: ResourceState = ResourceState.UNLOADED;
-    public refcount: number;
+    public refcount = 0;
     public needsUpdate = false;
 
     public constructor(public readonly type: typeof Resource) {
@@ -50,5 +62,5 @@ export abstract class Resource {
 
     public abstract load(protocol: Protocol);
     public abstract update(protocol: Protocol);
-    public abstract unload(): Promise<void> | void;
+    public abstract unload();
 }

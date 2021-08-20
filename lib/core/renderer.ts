@@ -1,29 +1,108 @@
 import { Protocol } from './protocol';
-import { Resource, Program, Buffer } from '../resources';
+import { Command, COMMAND_MAP } from './command';
+import { Resource, ResourceID, RESOURCE_MAP } from './resource';
+import { Instruction } from './instructor';
 
-const RESOURCE_MAP: Record<string, typeof Resource> = {};
+const DEBUG = true;
 
-registerResourceType(Program);
-registerResourceType(Buffer);
+export interface Renderer {
+    gl: WebGL2RenderingContext;
 
-export function registerResourceType(resource: typeof Resource) {
-    if (Object.prototype.hasOwnProperty.call(RESOURCE_MAP, resource.name)) {
-        throw new Error(`A resource type with the name ${resource.name} is already registered.`);
-    }
+    getResource<T extends typeof Resource>(id: ResourceID, type: T): InstanceType<T>;
 
-    RESOURCE_MAP[resource.name] = resource;
+    render(protocol: Protocol);
 }
 
-export class Renderer {
+export class CanvasRenderer implements Renderer {
     public gl: WebGL2RenderingContext;
 
+    private resources = new Map<number, Resource>();
 
     public constructor(public canvas: HTMLCanvasElement) {
         this.gl = canvas.getContext('webgl2');
     }
 
+    public getResource<T extends typeof Resource>(id: ResourceID, type: T) {
+        const resource = this.resources.get(id);
+
+        if (!resource) {
+            return null;
+        }
+
+        if (DEBUG) {
+            if (!(resource instanceof type)) {
+                throw new Error(`Resource has incorrect type!`);
+            }
+        }
+
+        return resource as InstanceType<T>;
+    }
+
     public render(protocol: Protocol) {
-        //
+        const resources = this.resources;
+
+        const commandMap: Command[] = Array(256);
+
+        let action: number;
+        while ((action = protocol.readUInt8()) !== Instruction.STOP) {
+            if (action === Instruction.RUN_COMMAND) {
+                const id = protocol.readUInt8();
+
+                commandMap[id].render(protocol, this);
+
+                continue;
+            }
+
+            if (action === Instruction.MAP_COMMAND) {
+                const commandName = protocol.readString();
+                const id = protocol.readUInt8();
+
+                const command = COMMAND_MAP[commandName];
+
+                if (!command) {
+                    throw new Error(`Command ${commandName} not registered`);
+                }
+
+                commandMap[id] = command;
+
+                continue;
+            }
+
+            if (action === Instruction.UPDATE_RESOURCE) {
+                const id = protocol.readUInt32();
+
+                const resource = this.resources.get(id);
+
+                resource.update(protocol);
+
+                continue;
+            }
+
+            if (action === Instruction.LOAD_RESOURCE) {
+                const id = protocol.readUInt32();
+                const name = protocol.readString();
+
+                const resource: Resource = new (RESOURCE_MAP[name] as any)(this);
+
+                resources.set(id, resource);
+
+                resource.load(protocol);
+
+                continue;
+            }
+
+            if (action === Instruction.UNLOAD_RESOURCE) {
+                const id = protocol.readUInt32();
+
+                const resource = this.resources.get(id);
+
+                resource.unload();
+
+                this.resources.delete(id);
+
+                continue;
+            }
+        }
     }
 }
 

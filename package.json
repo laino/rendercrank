@@ -7,7 +7,8 @@
   "author": "Nils Kuhnhenn",
   "license": "MIT",
   "scripts": {
-      "build": "webpack"
+      "build": "webpack && tsc --build examples/tsconfig.json",
+      "build-types": "yarn tsc --declaration --emitDeclarationOnly --outFile index.js"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.29.2",

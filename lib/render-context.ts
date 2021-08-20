@@ -1,9 +1,8 @@
 import {
-    ResourceRef,
     BufferRef,
     ArrayBufferViewLike,
     ArrayBufferViewLikeType
-} from '../resources';
+} from './resources';
 
 let CONTEXT_ID_COUNTER = 0;
 
@@ -17,30 +16,9 @@ export namespace RenderContextID {
 export class RenderContext {
     public readonly id: RenderContextID = RenderContextID.nextID();
 
-    public resources = new Set<ResourceRef>();
-
     public bufferPool = new BufferPool(this);
+
     public float32BufferPool = new BufferPoolView(this.bufferPool, Float32Array);
-
-    public addResource(resource: ResourceRef) {
-        if (this.resources.add(resource)) {
-            resource.refcount++;
-        }
-    }
-
-    public removeResource(resource: ResourceRef) {
-        if (this.resources.delete(resource)) {
-            resource.refcount--;
-        }
-    }
-
-    public removeAllResources() {
-        for (const resource of this.resources) {
-            resource.refcount--;
-        }
-
-        this.resources.clear();
-    }
 }
 
 const BUFFER_SIZE = 1024;
@@ -119,7 +97,6 @@ class BufferPool {
     public allocateSpace(amount: number) {
         if (this.buffersIndex >= this.buffers.length) {
             this.currentBuffer = new BufferRef(new ArrayBuffer(Math.max(BUFFER_SIZE, amount)));
-            this.context.addResource(this.currentBuffer);
             this.buffers.push(this.currentBuffer);
         }
 
@@ -128,10 +105,7 @@ class BufferPool {
         if (nextOffset > this.currentBuffer.size) {
             if (this.currentBufferOffset === 0) {
                 // We didn't use this buffer. Replace it with one that fits.
-                this.context.removeResource(this.currentBuffer);
-
                 this.currentBuffer = new BufferRef(new ArrayBuffer(Math.max(BUFFER_SIZE, amount)));
-                this.context.addResource(this.currentBuffer);
                 this.buffers[this.buffersIndex] = this.currentBuffer;
             } else {
                 this.buffersIndex++;
