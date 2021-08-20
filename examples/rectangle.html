@@ -1,0 +1,21 @@
+<html>
+    <head>
+        <script src="../build/rendercrank.js" type="text/javascript"></script>
+    </head>
+    <body>
+        <canvas id="myCanvas" width=600 height=400></canvas>
+        <script type="text/javscript">
+            const { Scene, CanvasRenderer } = RenderCrank;
+
+            const renderer = new CanvasRenderer(document.getElementById('myCanvas'));
+
+            const scene = renderer.component((context) => {
+                context.color(0xff0000);
+                context.fillRect(200, 200, 400, 400);
+            });
+
+            renderer.render(scene);
+
+        </script>
+    </body>
+</html>
