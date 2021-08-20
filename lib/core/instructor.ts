@@ -1,6 +1,6 @@
 import { ProtocolWriter } from './protocol';
 import { ResourceRef, ResourceState } from './resource';
-import { Command, CommandArguments, COMMAND_MAP } from './command';
+import { Command, COMMAND_MAP } from './command';
 
 export enum Instruction {
     STOP,
@@ -35,7 +35,7 @@ export class Instructor {
         this.commandProtocol = protocol.createWriter();
     }
 
-    public command<C extends Command>(command: C, ... args: CommandArguments<C>) {
+    public command<C extends Command>(command: C, ... args: C extends Command<infer A> ? A : never) {
         const commandProtocol = this.commandProtocol;
 
         commandProtocol.writeUInt8(Instruction.RUN_COMMAND);

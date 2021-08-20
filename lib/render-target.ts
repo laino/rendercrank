@@ -3,30 +3,7 @@ import { RenderContext } from './render-context';
 
 import { ProgramRef } from './resources';
 import { RunProgram } from './commands';
-
-export const ColoredTrianglesProgram = new ProgramRef({
-    attributes: {
-        color: 'vec4',
-        position: 'vec4',
-    },
-    vertexShader: `
-        out vec4 vColor;
-
-        void main() {
-            vColor = color;
-            gl_Position = position;
-        }
-    `,
-    fragmentShader: `
-        in vec4 vColor;
-         
-        out vec4 outColor;
-         
-        void main() {
-          outColor = vColor;
-        }
-    `,
-});
+import { ColoredTrianglesProgram } from './programs';
 
 export class RenderTarget {
     public zIndex = 0;
@@ -97,7 +74,12 @@ export class DrawCallBatcher {
                 byteOffset,
             } = context.float32BufferPool.writeMultiData(triangles, trianglesLength);
 
-            instructor.command(RunProgram, program, buffer, byteOffset, trianglesLength);
+            instructor.command(RunProgram, {
+                program,
+                buffer,
+                offset: byteOffset,
+                length: trianglesLength
+            });
         }
     }
 }

@@ -1,17 +1,19 @@
 import { ProtocolWriter, ProtocolReader, Renderer, Command, Instructor } from '../core';
 import { ProgramRef, BufferRef, Program, Buffer } from '../resources';
 
-export const RunProgram: Command = {
+export interface RunProgramOptions {
+    program: ProgramRef,
+    buffer: BufferRef,
+    offset: number,
+    length: number
+}
+
+export const RunProgram = Command({
     name: 'RunProgram',
 
-    submit(
-            instructor: Instructor,
-            protocol: ProtocolWriter,
-            program: ProgramRef,
-            buffer: BufferRef,
-            offset: number,
-            length: number
-    ) {
+    submit(instructor: Instructor, protocol: ProtocolWriter, options: RunProgramOptions) {
+        const {program, buffer, offset, length} = options;
+
         instructor.loadResource(program);
         instructor.loadResource(buffer);
 
@@ -35,4 +37,4 @@ export const RunProgram: Command = {
             return;
         }
     }
-};
+});

@@ -128,7 +128,7 @@ declare module "core/resource" {
 declare module "core/instructor" {
     import { ProtocolWriter } from "core/protocol";
     import { ResourceRef } from "core/resource";
-    import { Command, CommandArguments } from "core/command";
+    import { Command } from "core/command";
     export enum Instruction {
         STOP = 0,
         RUN_COMMAND = 1,
@@ -144,7 +144,7 @@ declare module "core/instructor" {
         resources: Set<ResourceRef>;
         private commandProtocol;
         constructor(protocol: ProtocolWriter);
-        command<C extends Command>(command: C, ...args: CommandArguments<C>): void;
+        command<C extends Command>(command: C, ...args: C extends Command<infer A> ? A : never): void;
         finish(): void;
         loadResource(resource: ResourceRef): void;
         unloadResource(resource: ResourceRef): void;
@@ -155,15 +155,12 @@ declare module "core/command" {
     import { ProtocolReader, ProtocolWriter } from "core/protocol";
     import { Instructor } from "core/instructor";
     export const COMMAND_MAP: Record<string, Command>;
-    export type CommandArguments<C extends Command> = C extends {
-        submit(instructor: Instructor, protocol: ProtocolWriter, ...args: infer A): void;
-    } ? A : never;
-    export interface Command {
+    export interface Command<A extends any[] = any[]> {
         name: string;
-        submit(instructor: Instructor, protocol: ProtocolWriter, ...args: any[]): void;
+        submit(instructor: Instructor, protocol: ProtocolWriter, ...args: A): void;
         render(protocol: ProtocolReader, renderer: Renderer): any;
     }
-    export function registerCommand(command: Command): void;
+    export function Command<A extends any[]>(def: Command<A>): Command<A>;
 }
 declare module "core/renderer" {
     import { Resource, ResourceID } from "core/resource";
@@ -294,16 +291,29 @@ declare module "render-context" {
 }
 declare module "commands/run-program" {
     import { Command } from "core/index";
-    export const RunProgram: Command;
+    import { ProgramRef, BufferRef } from "resources/index";
+    export interface RunProgramOptions {
+        program: ProgramRef;
+        buffer: BufferRef;
+        offset: number;
+        length: number;
+    }
+    export const RunProgram: Command<[options: RunProgramOptions]>;
 }
 declare module "commands/index" {
     export * from "commands/run-program";
+}
+declare module "programs/colored-triangles" {
+    import { ProgramRef } from "resources/index";
+    export const ColoredTrianglesProgram: ProgramRef;
+}
+declare module "programs/index" {
+    export * from "programs/colored-triangles";
 }
 declare module "render-target" {
     import { Instructor } from "core/index";
     import { RenderContext } from "render-context";
     import { ProgramRef } from "resources/index";
-    export const ColoredTrianglesProgram: ProgramRef;
     export class RenderTarget {
         private context;
         zIndex: number;
