@@ -1,1 +1,0 @@
-{"version":3,"file":"colored-triangles.js","sourceRoot":"","sources":["../../../../lib/programs/colored-triangles.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,UAAU,EAAE,MAAM,cAAc,CAAC;AAE1C,MAAM,CAAC,IAAM,uBAAuB,GAAG,IAAI,UAAU,CAAC;IAClD,UAAU,EAAE;QACR,KAAK,EAAE,MAAM;QACb,QAAQ,EAAE,MAAM;KACnB;IACD,YAAY,EAAE,wIAOb;IACD,cAAc,EAAE,mJAQf;CACJ,CAAC,CAAC"}
