@@ -7,9 +7,9 @@
   "author": "Nils Kuhnhenn",
   "license": "MIT",
   "scripts": {
-      "watch": "yarn webpack --watch",
+      "watch": "NODE_ENV=development yarn webpack --watch",
       "build": "yarn build-types && yarn build-webpack && yarn build-examples",
-      "build-webpack": "yarn webpack",
+      "build-webpack": "NODE_ENV=production yarn webpack && NODE_ENV=development yarn webpack",
       "build-types": "yarn tsc --declaration --emitDeclarationOnly --outFile index.js",
       "build-examples": "tsc --build examples/tsconfig.json"
   },

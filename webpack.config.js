@@ -1,9 +1,11 @@
 const path = require('path');
 const webpack = require('webpack');
 
+const mode = process.env['NODE_ENV'] || 'development';
+
 module.exports = {
     entry: './lib/index.ts',
-    mode: 'development',
+    mode,
     module: {
         rules: [
             {
@@ -17,7 +19,7 @@ module.exports = {
         extensions: ['.tsx', '.ts', '.js'],
     },
     output: {
-        filename: 'rendercrank.js',
+        filename: `rendercrank.${mode}.js`,
         path: path.resolve(__dirname, 'build'),
         library: {
             name: 'RenderCrank',
