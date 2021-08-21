@@ -25,13 +25,13 @@ Example
 ```ts
 import { autoDetectRenderer, component } from 'rendercrank';
 
-// Create a Canvas
+// Create a Canvas:
 const canvas = document.createElement('canvas');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 document.body.appendChild(canvas);
 
-// Automatically pick a single-threaded or WebWorker renderer based on browser capablities.
+// Automatically pick a single-threaded or WebWorker renderer based on browser capablities:
 const renderer = autoDetectRenderer(canvas);
 
 // Components wrap functions that draw something and automatically
@@ -41,10 +41,10 @@ const scene = component(t => t.rect(200, 200, 400, 400));
 // Render the component:
 renderer.render(scene);
 
-// Unload resources used by a component if we don't need it in the near future.
+// Unload resources used by a component if we don't need it in the near future:
 renderer.unload(scene);
 
-// Unloads things globally used by the renderer.
+// Unloads things globally used by the renderer:
 renderer.reset();
 ```
 
