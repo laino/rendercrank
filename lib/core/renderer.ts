@@ -19,7 +19,11 @@ export class CanvasRenderer implements Renderer {
     private resources = new Map<number, Resource>();
 
     public constructor(public canvas: HTMLCanvasElement) {
-        this.gl = canvas.getContext('webgl2');
+        const gl = this.gl = canvas.getContext('webgl2');
+
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
     }
 
     public getResource<T extends typeof Resource>(id: ResourceID, type: T) {

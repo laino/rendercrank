@@ -57,6 +57,8 @@ export class BufferRef extends ResourceRef {
             protocol.writeUInt32(this.buffer.byteLength);
             protocol.writeUInt8Array(this.byteView);
         }
+
+        this.needsUpdate = false;
     }
 
     public writeUpdate(protocol: ProtocolWriter) {
@@ -70,7 +72,7 @@ export class BufferRef extends ResourceRef {
             protocol.writeUInt32(offset);
             protocol.writeUInt32(length);
 
-            if (this.isShared || protocol.shared) {
+            if (!this.isShared && !protocol.shared) {
                 protocol.writeUInt8Array(this.byteView.subarray(offset, offset + length));
             }
         }
@@ -126,9 +128,9 @@ export class Buffer extends Resource {
             const length = protocol.readUInt32();
 
             if (this.sharedBuffer) {
-                gl.bufferSubData(gl.ARRAY_BUFFER, offset, protocol.readUInt8Array(length));
-            } else {
                 gl.bufferSubData(gl.ARRAY_BUFFER, offset, this.sharedBuffer, offset, length);
+            } else {
+                gl.bufferSubData(gl.ARRAY_BUFFER, offset, protocol.readUInt8Array(length));
             }
         }
 

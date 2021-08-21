@@ -316,7 +316,7 @@ export class ArrayBufferProtocolWriter extends ProtocolWriter {
         let offset = this.writeOffset;
 
         if (align > 1) {
-            offset += align - offset % align;
+            offset = offset + align - 1 - (offset + align - 1) % align;
         }
 
         const newOffset = offset + amount;
@@ -365,7 +365,7 @@ export class ArrayBufferProtocolReader extends ProtocolReader {
         let offset = this.readOffset;
 
         if (align > 1) {
-            offset += align - offset % align;
+            offset = offset + align - 1 - (offset + align - 1) % align;
         }
 
         const newOffset = offset + amount;

@@ -56,7 +56,7 @@ export class RenderTarget extends RenderContext {
     public triangles(data: number[]) {
         this.zIndex++;
         this.batch.program(ColoredTrianglesProgram, {
-            color: data,
+            color: Array(data.length).fill(0.8),
             position: data,
         });
     }

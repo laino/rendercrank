@@ -41,12 +41,13 @@ export class SingleThreadedCanvasRenderer extends CanvasRenderer {
     public unload(context: RenderContext) {
         const writer = this.protocolWriter;
         const reader = this.protocolReader;
+        const instructor = this.instructor;
 
         context.unload(this.instructor);
 
-        const data = writer.flush();
+        instructor.finish();
 
-        reader.receive(data);
+        reader.receive(writer.flush());
 
         this.render(reader);
     }

@@ -1,34 +1,38 @@
 import { ProtocolWriter, ProtocolReader, Renderer, Command, Instructor } from '../core';
 import { ProgramRef, ProgramDefinition, BufferRef, Program, Buffer } from '../resources';
 
-export type DefinitionOfProgram<P> = P extends ProgramRef ? P['def'] : never;
-export type ProgramAttributesData<P extends ProgramDefinition, T = number[]> =
+type ProgramAttributesData<P extends ProgramDefinition, T = number[]> =
     Required<Record<keyof P['attributes'], T>>;
 
 export interface RunProgramOptions<P extends ProgramDefinition> {
     program: ProgramRef<P>;
-    attributes: ProgramAttributesData<P, {buffer: BufferRef, offset: number}>;
-    attributeLength: number;
+    attributes: ProgramAttributesData<P, {buffer: BufferRef, byteOffset: number}>;
+    count: number;
+}
+
+function isIntegerType(type: GLenum) {
+    return type === WebGLRenderingContext.INT ||
+           type === WebGLRenderingContext.UNSIGNED_INT
 }
 
 export const RunProgram = Command({
     name: 'RunProgram',
 
-    submit<P extends ProgramRef>(
-            instructor: Instructor,
-            protocol: ProtocolWriter,
-            options: RunProgramOptions<DefinitionOfProgram<P>>) {
-
-        const {program, attributes, attributeLength} = options;
+    submit<P extends ProgramDefinition>(
+        instructor: Instructor,
+        protocol: ProtocolWriter,
+        options: RunProgramOptions<P>
+    ) {
+        const {program, attributes, count} = options;
 
         instructor.loadResource(program);
 
-        const data = [program.id, attributeLength];
+        const data = [program.id, count];
 
-        for (const attributeName of program.def.attributeOrder) {
-            const {buffer, offset} = attributes[attributeName];
+        for (const {name} of program.layout.attributes) {
+            const {buffer, byteOffset} = attributes[name];
             instructor.loadResource(buffer);
-            data.push(buffer.id, offset);
+            data.push(buffer.id, byteOffset);
         }
 
         protocol.writeUInt32Array(data);
@@ -36,9 +40,7 @@ export const RunProgram = Command({
 
     render(protocol: ProtocolReader, renderer: Renderer) {
         const programId = protocol.readUInt32();
-        const attributeLength = protocol.readUInt32();
-
-        console.log(programId, attributeLength);
+        const count = protocol.readUInt32();
 
         const program = renderer.getResource(programId, Program);
 
@@ -46,27 +48,52 @@ export const RunProgram = Command({
             return;
         }
 
-        const {attributeOrder, uniformOrder} = program.def;
+        const {attributes, uniforms} = program.layout;
 
-        const dataLength = (attributeOrder.length + uniformOrder.length) * 2;
+        const attributeDataLength = attributes.length * 2;
+        const uniformDataLength = uniforms.length * 2;
+
+        const dataLength = attributeDataLength + uniformDataLength;
 
         const data = protocol.readUInt32Array(dataLength);
 
-        let i = 0;
+        const buffers: {buffer: Buffer, offset: number}[] = [];
 
-        for (const attributeName of attributeOrder) {
+        for (let i = 0; i < attributeDataLength; i += 2) {
             const bufferId = data[i];
             const offset = data[i + 1];
 
             const buffer = renderer.getResource(bufferId, Buffer);
 
-            console.log(attributeName, bufferId, offset, buffer);
-
             if (!buffer) {
                 return;
             }
 
-            i += 2;
+            buffers.push({buffer, offset});
         }
+
+        const gl = renderer.gl;
+
+        const vao = gl.createVertexArray();
+
+        gl.bindVertexArray(vao);
+
+        for (let i = 0; i < attributes.length; i++) {
+            const {buffer, offset} = buffers[i];
+            const {size, dataType} = attributes[i];
+            const location = program.attributeLocations[i];
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer.buffer);
+            gl.enableVertexAttribArray(location);
+
+            if (isIntegerType(dataType)) {
+                gl.vertexAttribIPointer(location, size, dataType, 0, offset);
+            }
+
+            gl.vertexAttribPointer(location, size, dataType, false, 0, offset);
+        }
+
+        gl.useProgram(program.program);
+        gl.drawArrays(gl.TRIANGLES, 0, count);
     }
 });

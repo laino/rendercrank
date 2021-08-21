@@ -2,8 +2,14 @@ import { ProgramRef } from '../resources';
 
 export const ColoredTrianglesProgram = new ProgramRef({
     attributes: {
-        color: 'vec4',
-        position: 'vec4',
+        color: {
+            type: 'vec4',
+            size: 3
+        },
+        position: {
+            type: 'vec4',
+            size: 3
+        }
     },
     uniforms: {},
     vertexShader: `

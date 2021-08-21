@@ -11,4 +11,6 @@ const rectangle = component(t => t.rect(200, 200, 400, 400));
 
 renderer.renderComponent(rectangle);
 
-renderer.unloadComponent(rectangle);
+renderer.unload(rectangle);
+
+renderer.reset();
