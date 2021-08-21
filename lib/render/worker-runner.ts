@@ -1,5 +1,7 @@
-
 import { ArrayBufferProtocolReader, CanvasRunner } from '../core';
+
+export * from '../resources';
+export * from '../commands';
 
 export type WebworkerRunnerMessage = {
     command: 'setup',

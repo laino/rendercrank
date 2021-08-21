@@ -1,29 +1,22 @@
 import {
     ArrayBufferProtocolWriter,
-    ArrayBufferProtocolReader,
     Renderer,
-    CanvasRunner,
+    Renderable,
     Instructor,
     RenderContext,
 } from '../core';
 
 import { RenderTarget } from './render-target';
-import { Component } from './component';
-
 /*
  * Utility class to easily setup multi-threaded rendering.
  */
-export class WebworkerRenderer implements Renderer<RenderTarget> {
+export class WorkerRenderer implements Renderer<RenderTarget> {
     private protocolWriter = new ArrayBufferProtocolWriter();
     private instructor = new Instructor(this.protocolWriter);
 
     private renderTarget = new RenderTarget();
 
-    private worker: Worker;
-
-    public constructor(canvas: HTMLCanvasElement) {
-        this.worker = new Worker(new URL('./webworker-runner.js', import.meta.url));
-
+    public constructor(private canvas: HTMLCanvasElement, private worker: Worker) {
         const offscreen = canvas.transferControlToOffscreen();
 
         this.worker.postMessage({
@@ -32,7 +25,7 @@ export class WebworkerRenderer implements Renderer<RenderTarget> {
         }, [offscreen]);
     }
 
-    public render(renderable: Component) {
+    public render(renderable: Renderable<RenderTarget>) {
         const target = this.renderTarget;
         const writer = this.protocolWriter;
         const instructor = this.instructor;

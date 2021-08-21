@@ -56,6 +56,6 @@ export abstract class RenderContext {
 
 export interface Renderer<C extends RenderContext> {
     render(renderable: Renderable<C>);
-    unload(context: C);
+    unload(context: RenderContext);
     reset();
 }
