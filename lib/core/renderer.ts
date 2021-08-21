@@ -1,116 +1,61 @@
-import { Command, COMMAND_MAP } from './command';
-import { Resource, ResourceID, RESOURCE_MAP } from './resource';
-import { Instruction } from './instructor';
-import { ProtocolReader } from './protocol';
+import { ResourceRef } from './resource';
+import { Instructor } from './instructor';
 
-const DEBUG = true;
+export const DEBUG = true;
 
-export interface Renderer {
-    gl: WebGL2RenderingContext;
-
-    getResource<T extends typeof Resource>(id: ResourceID, type: T): InstanceType<T>;
-
-    render(protocol: ProtocolReader);
+export interface Renderable<C extends RenderContext> {
+    render(context: C);
 }
 
-export class CanvasRenderer implements Renderer {
-    public gl: WebGL2RenderingContext;
+export abstract class RenderContext {
+    public resources = new Set<ResourceRef>();
 
-    private resources = new Map<number, Resource>();
+    private unloadResources = new Set<ResourceRef>();
 
-    public constructor(public canvas: HTMLCanvasElement) {
-        const gl = this.gl = canvas.getContext('webgl2');
-
-        gl.viewport(0, 0, canvas.width, canvas.height);
-        gl.clearColor(0, 0, 0, 0);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-    }
-
-    public getResource<T extends typeof Resource>(id: ResourceID, type: T) {
-        const resource = this.resources.get(id);
-
-        if (!resource) {
-            return null;
-        }
-
-        if (DEBUG) {
-            if (!(resource instanceof type)) {
-                throw new Error(`Resource has incorrect type!`);
-            }
-        }
-
-        return resource as InstanceType<T>;
-    }
-
-    public render(protocol: ProtocolReader) {
-        const resources = this.resources;
-
-        const commandMap: Command[] = Array(256);
-
-        let action: number;
-        while ((action = protocol.readUInt8()) !== Instruction.STOP) {
-            if (action === Instruction.RUN_COMMAND) {
-                const id = protocol.readUInt8();
-
-                commandMap[id].render(protocol, this);
-
-                continue;
-            }
-
-            if (action === Instruction.MAP_COMMAND) {
-                const id = protocol.readUInt8();
-                const commandName = protocol.readString();
-
-                const command = COMMAND_MAP[commandName];
-
-                if (!command) {
-                    throw new Error(`Command ${commandName} not registered`);
-                }
-
-                commandMap[id] = command;
-
-                continue;
-            }
-
-            if (action === Instruction.UPDATE_RESOURCE) {
-                const id = protocol.readUInt32();
-
-                const resource = this.resources.get(id);
-
-                resource.update(protocol);
-
-                continue;
-            }
-
-            if (action === Instruction.LOAD_RESOURCE) {
-                const id = protocol.readUInt32();
-                const name = protocol.readString();
-
-                const resource: Resource = new (RESOURCE_MAP[name] as any)(this);
-
-                resources.set(id, resource);
-
-                resource.load(protocol);
-
-                continue;
-            }
-
-            if (action === Instruction.UNLOAD_RESOURCE) {
-                const id = protocol.readUInt32();
-
-                const resource = this.resources.get(id);
-
-                resource.unload();
-
-                this.resources.delete(id);
-
-                continue;
-            }
-
-            if (action === Instruction.ADVANCE) {
-                protocol.advance();
-                continue;
-            }
+    public addResource(resource: ResourceRef) {
+        if (this.resources.add(resource)) {
+            resource.refcount++;
+            this.unloadResources.delete(resource);
         }
     }
+
+    public removeResource(resource: ResourceRef) {
+        if (this.resources.delete(resource)) {
+            resource.refcount--;
+            this.unloadResources.add(resource);
+        }
+    }
+
+    public unload(instructor: Instructor) {
+        for (const resource of this.resources) {
+            resource.refcount--;
+            instructor.unloadResource(resource);
+        }
+
+        for (const resource of this.unloadResources) {
+            instructor.unloadResource(resource);
+        }
+
+        this.resources.clear();
+    }
+
+    public submit(instructor: Instructor) {
+        this._submit(instructor);
+
+        if (this.unloadResources.size) {
+            for (const resource of this.unloadResources) {
+                instructor.unloadResource(resource);
+            }
+
+            this.unloadResources.clear();
+        }
+    }
+
+    protected abstract _submit(instructor: Instructor);
+}
+
+export interface Renderer<C extends RenderContext> {
+    render(renderable: Renderable<C>);
+    unload(context: C);
+    reset();
 }

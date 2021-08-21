@@ -1,7 +1,7 @@
 {
   "include": ["**/*.ts"],
   "references": [
-      { "path": "../" }
+    { "path": "../" }
   ],
   "compilerOptions": {
     "module": "es6",

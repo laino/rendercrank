@@ -1,9 +1,16 @@
 import { ProtocolReader, ProtocolWriter } from './protocol';
-import { Renderer } from './renderer';
+import { RunnerContext } from "./runner";
+import { InstructorContext } from "./instructor";
 
-export const RESOURCE_MAP: Record<string, typeof Resource> = {};
+export const RESOURCE_MAP: Record<string, ResourceConstructable> = {};
 
-export function registerResourceType(resource: typeof Resource) {
+export interface ResourceConstructable {
+    readonly resourceName: string;
+
+    new(context: RunnerContext): Resource;
+}
+
+export function registerResourceType(resource: ResourceConstructable) {
     const name = resource.resourceName;
 
     if (name === 'Resource') {
@@ -41,18 +48,21 @@ export abstract class ResourceRef {
     public refcount = 0;
     public needsUpdate = false;
 
-    public constructor(public readonly type: typeof Resource) {
+    public constructor(public readonly type: ResourceConstructable) {
     }
 
-    public load(): Promise<void> | void {
+    // eslint-disable-next-line
+    public load(context: InstructorContext): Promise<void> | void {
         // overwrite
     }
 
-    public writeData(protocol: ProtocolWriter) {
+    // eslint-disable-next-line
+    public writeData(protocol: ProtocolWriter, context: InstructorContext) {
         // overwrite
     }
 
-    public writeUpdate(protocol: ProtocolWriter) {
+    // eslint-disable-next-line
+    public writeUpdate(protocol: ProtocolWriter, context: InstructorContext) {
         // overwrite
     }
 
@@ -65,7 +75,7 @@ export abstract class ResourceRef {
 export abstract class Resource {
     static readonly resourceName: string = 'Resource';
 
-    public constructor(public renderer: Renderer) {
+    public constructor(public context: RunnerContext) {
     }
 
     public abstract load(protocol: ProtocolReader);

@@ -1,7 +1,7 @@
-import { RenderContext } from './core';
+import { RenderContext, Renderable } from '../core';
 import { RenderTarget } from './render-target';
 
-export abstract class Component extends RenderContext {
+export abstract class Component extends RenderContext implements Renderable<RenderTarget> {
     public constructor() {
         super();
     }
@@ -17,9 +17,13 @@ export abstract class Component extends RenderContext {
 
 export type RenderFunction = (target: RenderTarget) => void;
 
-export function component(render: RenderFunction) {
-    const component = new (Component as any)();
+interface ConstructibleComponent {
+    new(): Component & {_render(target: RenderTarget)};
+}
+
+export function component(render: RenderFunction): Component {
+    const component = new (Component as ConstructibleComponent)();
     component._render = render;
-    return component as Component;
+    return component;
 }
 

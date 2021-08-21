@@ -1,13 +1,13 @@
-import { Instructor, RenderContext } from './core';
-import { RunProgram } from './commands';
+import { Instructor, RenderContext, Allocator, SharedAllocator, RepeatableSharedAllocator } from '../core';
+import { RunProgram } from '../commands';
 
 import {
     ProgramDefinition,
     ProgramRef,
     BufferRef,
     ArrayBufferViewLike,
-    ArrayBufferViewLikeType
-} from './resources';
+    ArrayBufferViewLikeType,
+} from '../resources';
 
 interface ProgramCall<P extends ProgramDefinition = ProgramDefinition> {
     program: ProgramRef<P>;
@@ -16,7 +16,7 @@ interface ProgramCall<P extends ProgramDefinition = ProgramDefinition> {
 }
 
 export class DrawCallBatch {
-    private bufferPool = new BufferPool();
+    private bufferPool = new RepeatableSharedAllocator(new BufferAllocator(this.context));
 
     private float32BufferPool = new BufferPoolView(this.bufferPool, Float32Array);
     private int32BufferPool = new BufferPoolView(this.bufferPool, Int32Array);
@@ -68,12 +68,13 @@ export class DrawCallBatch {
             instructor.command(RunProgram, {
                 program: call.program,
                 attributes: this.buildAttributes(call),
+                uniforms: {},
                 count: call.count
             });
         }
 
         this.programs = {};
-        this.bufferPool.reset();
+        this.bufferPool.repeat();
     }
 
     private buildAttributes(call: ProgramCall<ProgramDefinition>) {
@@ -98,22 +99,22 @@ export class DrawCallBatch {
     }
 }
 
-const BUFFER_SIZE = 1024;
+const MIN_BUFFER_SIZE = 1024;
 
 class BufferPoolView {
     private currentBuffer: BufferRef;
     private currentView: ArrayBufferViewLike;
 
-    public constructor(public pool: BufferPool, public type: ArrayBufferViewLikeType) {
+    public constructor(public pool: SharedAllocator<BufferRef>, public type: ArrayBufferViewLikeType) {
     }
 
     public writeMultiData(multi: ArrayLike<number>[], totalLength: number) {
         const ELEMENT_SIZE = this.type.BYTES_PER_ELEMENT;
         const byteLength = totalLength * ELEMENT_SIZE;
 
-        const byteOffset = this.pool.allocateSpace(byteLength, ELEMENT_SIZE);
+        const byteOffset = this.pool.allocate(byteLength, ELEMENT_SIZE);
 
-        const buffer = this.pool.currentBuffer;
+        const buffer = this.pool.current;
 
         if (this.currentBuffer !== buffer) {
             this.currentBuffer = buffer;
@@ -139,8 +140,8 @@ class BufferPoolView {
     public writeData(data: ArrayLike<number>) {
         const ELEMENT_SIZE = this.type.BYTES_PER_ELEMENT;
         const byteLength = data.length * ELEMENT_SIZE;
-        const byteOffset = this.pool.allocateSpace(byteLength, ELEMENT_SIZE);
-        const buffer = this.pool.currentBuffer;
+        const byteOffset = this.pool.allocate(byteLength, ELEMENT_SIZE);
+        const buffer = this.pool.current;
 
         if (this.currentBuffer !== buffer) {
             this.currentBuffer = buffer;
@@ -158,49 +159,25 @@ class BufferPoolView {
     }
 }
 
-class BufferPool {
-    private buffers: BufferRef[] = [];
-    private buffersIndex = 0;
-
-    public currentBuffer: BufferRef;
-    public currentBufferOffset = 0;
-
-    public reset() {
-        this.buffersIndex = 0;
-        this.currentBufferOffset = 0;
+class BufferAllocator extends Allocator<BufferRef> {
+    public constructor(private context: RenderContext) {
+        super();
     }
 
-    public allocateSpace(amount: number, align: number) {
-        if (this.buffersIndex >= this.buffers.length) {
-            this.currentBuffer = new BufferRef(new ArrayBuffer(Math.max(BUFFER_SIZE, amount)));
-            this.buffers.push(this.currentBuffer);
-        }
+    create(size: number) {
+        const ref = new BufferRef(new ArrayBuffer(Math.max(MIN_BUFFER_SIZE, size)));
 
-        let offset = this.currentBufferOffset;
+        this.context.addResource(ref);
 
-        if (align > 1) {
-            offset = offset + align - 1 - (offset + align - 1) % align;
-        }
+        return ref;
+    }
 
-        const nextOffset = offset + amount;
+    discard(ref: BufferRef) {
+        this.context.removeResource(ref);
+    }
 
-        if (nextOffset > this.currentBuffer.size) {
-            if (this.currentBufferOffset === 0) {
-                // We didn't use this buffer. Replace it with one that fits.
-                this.buffers.push(this.currentBuffer);
-                this.currentBuffer = new BufferRef(new ArrayBuffer(Math.max(BUFFER_SIZE, amount)));
-                this.buffers[this.buffersIndex] = this.currentBuffer;
-            } else {
-                this.buffersIndex++;
-                this.currentBufferOffset = 0;
-                this.currentBuffer = this.buffers[this.buffersIndex];
-                return this.allocateSpace(amount, align);
-            }
-        }
-
-        this.currentBufferOffset = nextOffset;
-
-        return offset;
+    sizeOf(ref: BufferRef) {
+        return ref.size;
     }
 }
 

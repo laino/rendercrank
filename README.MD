@@ -23,7 +23,7 @@ Example
 -------
 
 ```ts
-import { SingleThreadedCanvasRenderer, component } from 'rendercrank';
+import { SingleThreadedRenderer, component } from 'rendercrank';
 
 // Create a Canvas
 const canvas = document.createElement('canvas');
@@ -32,14 +32,14 @@ canvas.height = window.innerHeight;
 document.body.appendChild(canvas);
 
 // Utility class to create a single-threaded renderer quickly:
-const renderer = new SingleThreadedCanvasRenderer(canvas);
+const renderer = new SingleThreadedRenderer(canvas);
 
 // Components wrap functions that draw something and automatically
 // keep track of (and reference) resources used within them:
 const scene = component(t => t.rect(200, 200, 400, 400));
 
 // Render the component:
-renderer.renderComponent(scene);
+renderer.render(scene);
 
 // When you are not going to render some component in the near future,
 // it may be wise to release resources used by it.

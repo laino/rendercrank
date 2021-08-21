@@ -1,4 +1,4 @@
-import { ProtocolReader, ProtocolWriter, Resource, ResourceRef } from '../core';
+import { registerResourceType, ProtocolReader, ProtocolWriter, Resource, ResourceRef } from '../core';
 
 interface VertexBufferUpdate {
     offset: number,
@@ -105,7 +105,7 @@ export class Buffer extends Resource {
             data = protocol.readUInt8Array(length);
         }
 
-        const gl = this.renderer.gl;
+        const gl = this.context.gl;
 
         const buffer = this.buffer = gl.createBuffer();
 
@@ -117,7 +117,7 @@ export class Buffer extends Resource {
     }
 
     public update(protocol: ProtocolReader) {
-        const gl = this.renderer.gl;
+        const gl = this.context.gl;
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
 
@@ -138,10 +138,12 @@ export class Buffer extends Resource {
     }
 
     public unload() {
-        const gl = this.renderer.gl;
+        const gl = this.context.gl;
 
         gl.deleteBuffer(this.buffer);
 
         this.buffer = null;
     }
 }
+
+registerResourceType(Buffer);

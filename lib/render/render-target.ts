@@ -1,5 +1,5 @@
-import { Instructor, RenderContext } from './core';
-import { ColoredTrianglesProgram } from './programs';
+import { Instructor, RenderContext } from '../core';
+import { ColoredTrianglesProgram } from '../programs';
 import { DrawCallBatch } from './draw-call-batch';
 import { Component } from './component';
 
@@ -10,6 +10,8 @@ export class RenderTarget extends RenderContext {
 
     private contextStack: RenderContext[] = [];
     private context: RenderContext;
+
+    private transform = [];
 
     public pushContext(context: RenderContext) {
         if (this.context) {
@@ -23,7 +25,7 @@ export class RenderTarget extends RenderContext {
         return this.context = this.contextStack.pop();
     }
 
-    public submit(instructor: Instructor) {
+    protected _submit(instructor: Instructor) {
         this.batch.submit(instructor);
     }
 
@@ -44,10 +46,10 @@ export class RenderTarget extends RenderContext {
         const z = this.zIndex;
 
         this.triangles([
-            x,         y         , z,
+            x       ,  y         , z,
             x + width, y         , z,
             x + width, y + height, z,
-            x,         y         , z,
+            x       ,  y         , z,
             x + width, y + height, z,
             x        , y + height, z,
         ]);

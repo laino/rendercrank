@@ -1,4 +1,6 @@
-const DEFAULT_BUFFER_SIZE = 1024;
+import { Allocator, SharedAllocator } from './allocator';
+
+const MIN_BUFFER_SIZE = 1024;
 const MAX_INLINE_STRING_LENGTH = 128;
 
 const IS_LITTLE_ENDIAN =
@@ -9,7 +11,6 @@ export abstract class ProtocolWriter {
 
     protected writeBuffer: ArrayBuffer;
     protected writeView: DataView;
-    protected writeOffset: number;
 
     public constructor(public readonly shared = false) {}
 
@@ -240,60 +241,38 @@ export abstract class ProtocolReader {
     }
 }
 
-class ProtocolBufferAllocator {
-    private buffers: ArrayBuffer[] = [];
-    private bufferIndex = -1;
-
-    public allocate(amount: number) {
-        this.bufferIndex++;
-
-        if (this.bufferIndex === this.buffers.length) {
-            const buffer = new ArrayBuffer(Math.max(amount, DEFAULT_BUFFER_SIZE));
-            this.buffers.push(buffer);
-            return buffer;
-        }
-
-        let buffer = this.buffers[this.bufferIndex];
-
-        if (buffer.byteLength < amount) {
-            this.buffers.push(buffer);
-
-            buffer = new ArrayBuffer(amount);
-
-            this.buffers[this.bufferIndex] = buffer;
-        }
-
-        return buffer;
+class ProtocolBufferAllocator extends Allocator<ArrayBuffer> {
+    create(size: number) {
+        return new ArrayBuffer(Math.max(size, MIN_BUFFER_SIZE));
     }
 
-    public return(arr: ArrayBuffer[]) {
-        this.buffers.push(...arr);
+    discard() {
+        // noop
     }
 
-    public reset() {
-        this.buffers = [];
-        this.bufferIndex = 0;
+    sizeOf(buffer: ArrayBuffer) {
+        return buffer.byteLength;
     }
 }
 
 export class ArrayBufferProtocolWriter extends ProtocolWriter {
     private writeBuffers: ArrayBuffer[] = [];
+    private sharedAllocator: SharedAllocator<ArrayBuffer>;
 
     protected writeBuffer: ArrayBuffer;
     protected writeView: DataView;
-    protected writeOffset = 0;
 
     public constructor(
-            shared = false,
-            private allocator: ProtocolBufferAllocator = new ProtocolBufferAllocator(),
+        shared = false,
+        private allocator: Allocator<ArrayBuffer> = new ProtocolBufferAllocator(),
     ) {
         super(shared);
+
+        this.sharedAllocator = new SharedAllocator(allocator);
     }
 
     public advance() {
-        this.writeBuffer = null;
-        this.writeView = null;
-        this.writeOffset = 0;
+        this.sharedAllocator.advance();
     }
 
     public passData(data: ArrayBuffer) {
@@ -305,38 +284,26 @@ export class ArrayBufferProtocolWriter extends ProtocolWriter {
     }
 
     protected allocate(amount: number, align: number): number {
-        if (!this.writeBuffer) {
-            this.writeBuffer = this.allocator.allocate(amount);
-            this.writeView = new DataView(this.writeBuffer);
-            this.writeBuffers.push(this.writeBuffer);
-            this.writeOffset = amount;
-            return 0;
+        const alloc = this.sharedAllocator;
+
+        const offset = alloc.allocate(amount, align);
+
+        if (this.writeBuffer !== alloc.current) {
+            this.writeBuffer = alloc.current;
+            this.writeView = new DataView(alloc.current);
+            this.writeBuffers.push(alloc.current);
         }
-
-        let offset = this.writeOffset;
-
-        if (align > 1) {
-            offset = offset + align - 1 - (offset + align - 1) % align;
-        }
-
-        const newOffset = offset + amount;
-
-        if (newOffset > this.writeBuffer.byteLength) {
-            this.advance();
-            return this.allocate(amount, align);
-        }
-
-        this.writeOffset = newOffset;
 
         return offset;
     }
 
     public flush() {
+        this.advance();
+
         const oldBuffers = this.writeBuffers;
 
         this.writeBuffer = null;
         this.writeView = null;
-        this.writeOffset = 0;
         this.writeBuffers = [];
 
         return oldBuffers;

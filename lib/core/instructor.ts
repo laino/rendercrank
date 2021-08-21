@@ -12,7 +12,11 @@ export enum Instruction {
     ADVANCE
 }
 
-export class Instructor {
+export interface InstructorContext {
+    loadResource(resource: ResourceRef);
+}
+
+export class Instructor implements InstructorContext {
     private mappedCommands: Record<string, number> = {};
     private commandProtocol: ProtocolWriter;
 
@@ -41,21 +45,20 @@ export class Instructor {
         const commandProtocol = this.commandProtocol;
 
         commandProtocol.writeUInt8(Instruction.RUN_COMMAND);
+        commandProtocol.writeUInt8(this.mappedCommands[command.name]);
 
-        command.submit(this, commandProtocol, ...args);
+        command.submit(commandProtocol, this, ...args);
     }
 
     public finish() {
-        this.commandProtocol.writeUInt8(Instruction.STOP);
-
-        const commandData = this.commandProtocol.flush();
+        const commandProtocol = this.commandProtocol;
         const protocol = this.protocol;
 
+        commandProtocol.writeUInt8(Instruction.STOP);
         protocol.writeUInt8(Instruction.ADVANCE);
-
         protocol.advance();
 
-        for (const data of commandData) {
+        for (const data of commandProtocol.flush()) {
             protocol.passData(data);
         }
     }
@@ -71,7 +74,7 @@ export class Instructor {
         if (resource.state === ResourceState.UNLOADED) {
             resource.state = ResourceState.LOADING;
 
-            const result = resource.load();
+            const result = resource.load(this);
 
             if (result) {
                 result.then(() => {
@@ -92,7 +95,7 @@ export class Instructor {
             protocol.writeUInt8(Instruction.LOAD_RESOURCE);
             protocol.writeUInt32(resource.id);
             protocol.writeString(resource.type.resourceName);
-            resource.writeData(protocol);
+            resource.writeData(protocol, this);
 
             resource.state = ResourceState.READY;
         }
@@ -101,7 +104,7 @@ export class Instructor {
             resource.needsUpdate = false;
             protocol.writeUInt8(Instruction.UPDATE_RESOURCE);
             protocol.writeUInt32(resource.id);
-            resource.writeUpdate(protocol);
+            resource.writeUpdate(protocol, this);
         }
     }
 

@@ -2,13 +2,15 @@ import {
     Resource,
     ResourceRef,
     ProtocolReader,
-    ProtocolWriter
+    ProtocolWriter,
+    registerResourceType
 } from '../core';
 
 const PREAMBLE = "#version 300 es\nprecision highp float;\n";
 
 function AttrTypeInfo(dataType: GLenum, size: number) {
     return {
+        normalize: false,
         dataType,
         size,
     };
@@ -46,6 +48,7 @@ export interface AttributeDefinition {
     type: AttributeType;
     dataType?: GLenum;
     size?: number;
+    normalize?: boolean;
 }
 
 export interface UniformDefinition {
@@ -73,6 +76,13 @@ export interface ProgramLayout {
     uniforms: UniformLayout;
 }
 
+const STANDARD_UNIFORMS: UniformLayout = [{
+    name: 'u_resolution',
+    type: 'vec4',
+    size: 4,
+    dataType: WebGLRenderingContext.FLOAT,
+}];
+
 export class ProgramRef<D extends ProgramDefinition = ProgramDefinition> extends ResourceRef {
     public layout: ProgramLayout;
 
@@ -85,11 +95,11 @@ export class ProgramRef<D extends ProgramDefinition = ProgramDefinition> extends
                 Object.assign({}, AttributeTypeLayout[type.type], type, {name});
         });
 
-        const uniforms = Object.entries(def.uniforms).map(([name, type]) => {
+        const uniforms = STANDARD_UNIFORMS.concat(Object.entries(def.uniforms).map(([name, type]) => {
             return typeof type === 'string' ?
                 Object.assign({}, UniformTypeLayout[type], {type, name}) :
                 Object.assign({}, UniformTypeLayout[type.type], type, {name});
-        });
+        }));
 
         this.layout = Object.assign({}, {
             vertexShader: createVertexShaderCode(def.vertexShader, uniforms, attributes),
@@ -123,7 +133,7 @@ export class Program extends Resource {
     public load(protocol: ProtocolReader) {
         const layout = this.layout = JSON.parse(protocol.readString()) as ProgramLayout;
 
-        const gl = this.renderer.gl;
+        const gl = this.context.gl;
 
         const vertexShader = this.vertexShader = gl.createShader(gl.VERTEX_SHADER);
 
@@ -165,7 +175,7 @@ export class Program extends Resource {
     }
 
     public unload() {
-        const gl = this.renderer.gl;
+        const gl = this.context.gl;
 
         gl.deleteProgram(this.program);
         gl.deleteShader(this.vertexShader);
@@ -224,3 +234,5 @@ function fixIndent(body: string) {
         return line.slice(minIndent);
     }).join('\n');
 }
+
+registerResourceType(Program);
