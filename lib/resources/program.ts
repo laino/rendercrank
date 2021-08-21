@@ -76,8 +76,13 @@ export interface ProgramLayout {
     uniforms: UniformLayout;
 }
 
-const STANDARD_UNIFORMS: UniformLayout = [{
-    name: 'u_resolution',
+export const FIXED_UNIFORMS: UniformLayout = [{
+    name: 'u_scale',
+    type: 'vec4',
+    size: 4,
+    dataType: WebGLRenderingContext.FLOAT,
+}, {
+    name: 'u_translate',
     type: 'vec4',
     size: 4,
     dataType: WebGLRenderingContext.FLOAT,
@@ -95,7 +100,7 @@ export class ProgramRef<D extends ProgramDefinition = ProgramDefinition> extends
                 Object.assign({}, AttributeTypeLayout[type.type], type, {name});
         });
 
-        const uniforms = STANDARD_UNIFORMS.concat(Object.entries(def.uniforms).map(([name, type]) => {
+        const uniforms = FIXED_UNIFORMS.concat(Object.entries(def.uniforms).map(([name, type]) => {
             return typeof type === 'string' ?
                 Object.assign({}, UniformTypeLayout[type], {type, name}) :
                 Object.assign({}, UniformTypeLayout[type.type], type, {name});

@@ -1,5 +1,5 @@
 import { ProtocolWriter, ProtocolReader, RunnerContext, Command, InstructorContext } from '../core';
-import { ProgramRef, ProgramDefinition, BufferRef, Program, Buffer } from '../resources';
+import { ProgramRef, ProgramDefinition, BufferRef, Program, Buffer, FIXED_UNIFORMS } from '../resources';
 
 type ProgramAttributesData<P extends ProgramDefinition, T = number[]> =
     Required<Record<keyof P['attributes'], T>>;
@@ -19,12 +19,11 @@ function isIntegerType(type: GLenum) {
            type === WebGLRenderingContext.UNSIGNED_INT;
 }
 
-const FIXED_UNIFORMS_COUNT = 1;
-
 function setFixedUniforms(context: RunnerContext, program: Program) {
     const gl = context.gl;
 
     gl.uniform4f(program.uniformLocations[0], context.width, -context.height, 1, 1);
+    gl.uniform4f(program.uniformLocations[1], -1, 1, 0, 0);
 }
 
 export const RunProgram = Command({
@@ -53,7 +52,7 @@ export const RunProgram = Command({
 
         const uniformLayout = program.layout.uniforms;
 
-        for (let i = FIXED_UNIFORMS_COUNT; i < uniformLayout.length; i++) {
+        for (let i = FIXED_UNIFORMS.length; i < uniformLayout.length; i++) {
             const {name, dataType, size} = uniformLayout[i];
             const data = uniforms[name];
 
@@ -127,7 +126,7 @@ export const RunProgram = Command({
 
         setFixedUniforms(context, program);
 
-        for (let i = FIXED_UNIFORMS_COUNT; i < uniforms.length; i++) {
+        for (let i = FIXED_UNIFORMS.length; i < uniforms.length; i++) {
             const {size, dataType} = attributes[i];
             const location = program.uniformLocations[i];
 

@@ -17,7 +17,7 @@ export const ColoredTrianglesProgram = new ProgramRef({
 
         void main() {
             vColor = color;
-            gl_Position = (position / u_resolution);
+            gl_Position = (position / u_scale) + u_translate;
         }
     `,
     fragmentShader: `

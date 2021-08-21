@@ -57,7 +57,7 @@ export class CanvasRunner implements RunnerContext {
         this.width = canvas.width;
         this.height = canvas.height;
 
-        gl.viewport(width / -2, height / 2, width, height);
+        gl.viewport(0, 0, width, height);
         gl.clearColor(0, 0, 0, 0);
         gl.clear(gl.COLOR_BUFFER_BIT);
     }
