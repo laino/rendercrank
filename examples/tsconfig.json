@@ -1,5 +1,8 @@
 {
-  "include": ["**/*.ts"],
+  "include": [
+    "**/*.ts",
+    "../global.d.ts"
+  ],
   "references": [
     { "path": "../" }
   ],

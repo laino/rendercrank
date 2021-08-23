@@ -24,7 +24,7 @@ export function registerResourceType(resource: ResourceConstructable) {
     RESOURCE_MAP[name] = resource;
 }
 
-export enum ResourceState {
+export enum ResourceRefState {
     UNLOADED,
     LOADING,
     LOAD_ABORTED,
@@ -34,17 +34,21 @@ export enum ResourceState {
 
 let RESOURCE_ID_COUNTER = 0;
 
-export type ResourceID = number;
-export namespace ResourceID {
-    export function nextID(): ResourceID {
+export type ResourceId = number;
+export namespace ResourceId {
+    export function nextID(): ResourceId {
         return RESOURCE_ID_COUNTER++;
     }
 }
 
-export abstract class ResourceRef {
-    public readonly id: ResourceID = ResourceID.nextID();
+const resolve = Promise.resolve(void 0);
 
-    public state: ResourceState = ResourceState.UNLOADED;
+export abstract class ResourceRef {
+    private loadPromise: Promise<void> = resolve;
+
+    public readonly id: ResourceId = ResourceId.nextID();
+
+    public state: ResourceRefState = ResourceRefState.UNLOADED;
     public refcount = 0;
     public needsUpdate = false;
 
@@ -52,33 +56,140 @@ export abstract class ResourceRef {
     }
 
     // eslint-disable-next-line
-    public load(context: InstructorContext): Promise<void> | void {
-        // overwrite
+    public load(): Promise<void> {
+        if (this.state === ResourceRefState.LOAD_ABORTED) {
+            this.state = ResourceRefState.LOADING;
+            return;
+        }
+
+        if (this.state !== ResourceRefState.UNLOADED) {
+            return resolve;
+        }
+
+        this.state = ResourceRefState.LOADING;
+
+        const result = this.prepare();
+
+        if (!result) {
+            this.state = ResourceRefState.LOADED;
+            return resolve;
+        }
+
+        return this.loadPromise = result.then(() => {
+            this.loadPromise = resolve;
+
+            if (this.state !== ResourceRefState.LOAD_ABORTED) {
+                this.state = ResourceRefState.LOADED;
+            }
+        });
     }
 
-    // eslint-disable-next-line
-    public writeData(protocol: ProtocolWriter, context: InstructorContext) {
-        // overwrite
+    public ready(protocol: ProtocolWriter) {
+        if (this.state !== ResourceRefState.LOADED) {
+            return;
+        }
+
+        this.loadResource(protocol);
+
+        this.state = ResourceRefState.READY;
     }
 
-    // eslint-disable-next-line
-    public writeUpdate(protocol: ProtocolWriter, context: InstructorContext) {
-        // overwrite
-    }
+    public update(protocol: ProtocolWriter) {
+        if (this.state !== ResourceRefState.READY || !this.needsUpdate) {
+            return;
+        }
 
-    public onUnload() {
-        // overwrite
         this.needsUpdate = false;
+
+        this.updateResource(protocol);
     }
+
+    // eslint-disable-next-line
+    public unready(protocol: ProtocolWriter) {
+        if (this.state !== ResourceRefState.READY) {
+            return;
+        }
+
+        this.unloadResource(protocol);
+
+        this.state = ResourceRefState.LOADED;
+    }
+
+    public unload() {
+        if (this.state === ResourceRefState.LOADING) {
+            this.state = ResourceRefState.LOAD_ABORTED;
+            this.loadPromise.then(() => {
+                if (this.state === ResourceRefState.LOAD_ABORTED) {
+                    this.state = ResourceRefState.LOADED;
+                    this.unload();
+                }
+            });
+            return;
+        }
+
+        // cannot unload if we're still used somewhere
+        if (this.state !== ResourceRefState.LOADED) {
+            return;
+        }
+
+        this.reset();
+
+        this.state = ResourceRefState.UNLOADED;
+    }
+
+    // eslint-disable-next-line
+    protected prepare(): Promise<void> | void {
+        // overwrite
+    }
+
+    // eslint-disable-next-line
+    protected loadResource(protocol: ProtocolWriter) {
+        // overwrite
+    }
+
+    // eslint-disable-next-line
+    protected updateResource(protocol: ProtocolWriter) {
+        // overwrite
+    }
+
+    // eslint-disable-next-line
+    protected unloadResource(protocol: ProtocolWriter) {
+        // overwrite
+    }
+
+    // eslint-disable-next-line
+    protected reset() {
+        // overwrite
+    }
+}
+
+export enum ResourceYieldUntil {
+    LATER,
+    BARRIER,
+    FINALIZE,
+    STABLE
 }
 
 export abstract class Resource {
     static readonly resourceName: string = 'Resource';
 
+    public operationsCount = 0;
+
     public constructor(public context: RunnerContext) {
     }
 
-    public abstract load(protocol: ProtocolReader);
-    public abstract update(protocol: ProtocolReader);
-    public abstract unload();
+    // eslint-disable-next-line
+    public load(protocol: ProtocolReader): void | Generator<ResourceYieldUntil> {
+        // overwrite
+    }
+
+    // eslint-disable-next-line
+    public update(protocol: ProtocolReader): void | Generator<ResourceYieldUntil> {
+        // overwrite
+    }
+
+    // eslint-disable-next-line
+    public unload(protocol: ProtocolReader): void | Generator<ResourceYieldUntil> {
+        // overwrite
+    }
 }

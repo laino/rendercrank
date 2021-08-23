@@ -31,15 +31,15 @@ export class DrawCallBatch {
         program: ProgramRef<D>,
         attributes: Required<Record<keyof D['attributes'], number[]>>
     ) {
-        const ID = `${program.id}`;
+        const id = `${program.id}`;
 
         const layoutAttributes = program.layout.attributes;
         const count = attributes[layoutAttributes[0].name].length / layoutAttributes[0].size;
 
-        let data = this.programs[ID];
+        let data = this.programs[id];
 
         if (!data) {
-            this.programs[ID] = data = {
+            this.programs[id] = data = {
                 program,
                 count,
                 attributes: [],
@@ -63,12 +63,16 @@ export class DrawCallBatch {
 
     public submit(instructor: Instructor) {
         for (const call of Object.values(this.programs)) {
+            const vao = call.program.createVAO(this.buildAttributes(call));
+            
             this.context.addResource(call.program);
+            this.context.addResource(vao);
 
             instructor.command(RunProgram, {
                 program: call.program,
-                attributes: this.buildAttributes(call),
                 uniforms: {},
+                vao,
+                offset: 0,
                 count: call.count
             });
         }
@@ -80,18 +84,18 @@ export class DrawCallBatch {
     private buildAttributes(call: ProgramCall<ProgramDefinition>) {
         const attributes = call.program.layout.attributes;
 
-        const map: Record<string, {buffer: BufferRef, byteOffset: number}> = {};
+        const map: Record<string, {buffer: BufferRef, offset: number}> = {};
 
         for (let i = 0; i < attributes.length; i++) {
-            const {dataType, name} = attributes[i];
+            const {dataType, name, size} = attributes[i];
             const data = call.attributes[i];
 
             if (dataType === WebGL2RenderingContext.FLOAT) {
-                map[name] = this.float32BufferPool.writeMultiData(data, call.count * 3);
+                map[name] = this.float32BufferPool.writeMultiData(data, call.count * size);
             } else if (dataType === WebGL2RenderingContext.INT) {
-                map[name] = this.int32BufferPool.writeMultiData(data, call.count * 3);
+                map[name] = this.int32BufferPool.writeMultiData(data, call.count * size);
             } else if (dataType === WebGL2RenderingContext.UNSIGNED_INT) {
-                map[name] = this.uint32BufferPool.writeMultiData(data, call.count * 3);
+                map[name] = this.uint32BufferPool.writeMultiData(data, call.count * size);
             }
         }
 
@@ -133,7 +137,7 @@ class BufferPoolView {
 
         return {
             buffer,
-            byteOffset
+            offset: byteOffset
         };
     }
 

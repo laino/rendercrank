@@ -1,16 +1,11 @@
-import { ProtocolWriter, ProtocolReader, RunnerContext, Command, InstructorContext } from '../core';
-import { ProgramRef, ProgramDefinition, BufferRef, Program, Buffer, FIXED_UNIFORMS } from '../resources';
-
-type ProgramAttributesData<P extends ProgramDefinition, T = number[]> =
-    Required<Record<keyof P['attributes'], T>>;
-
-type ProgramUniformData<P extends ProgramDefinition, T = number[]> =
-    Required<Record<keyof P['uniforms'], T>>;
+import { Command, InstructorContext, ProtocolReader, ProtocolWriter, RunnerContext } from '../core';
+import { VAO, VAORef, Buffer, BufferRef, FIXED_UNIFORMS, Program, ProgramAttributesData, ProgramDefinition, ProgramRef, ProgramUniformData } from '../resources';
 
 export interface RunProgramOptions<P extends ProgramDefinition> {
     program: ProgramRef<P>;
-    attributes: ProgramAttributesData<P, {buffer: BufferRef, byteOffset: number}>;
     uniforms: ProgramUniformData<P, number[]>;
+    vao: VAORef;
+    offset: number;
     count: number;
 }
 
@@ -34,21 +29,17 @@ export const RunProgram = Command({
         context: InstructorContext,
         options: RunProgramOptions<P>
     ) {
-        const {program, attributes, count, uniforms} = options;
+        const {program, vao, offset, count, uniforms} = options;
 
-        context.loadResource(program);
+        context.readyResource(program);
 
-        const data = [program.id, count];
-
-        const attributeLayout = program.layout.attributes;
-
-        for (const {name} of attributeLayout) {
-            const {buffer, byteOffset} = attributes[name];
-            context.loadResource(buffer);
-            data.push(buffer.id, byteOffset);
+        for (const {buffer} of vao.definition) {
+            context.readyResource(buffer);
         }
 
-        protocol.writeUInt32Array(data);
+        context.readyResource(vao);
+
+        protocol.writeUInt32Array([program.id, vao.id, offset, count]);
 
         const uniformLayout = program.layout.uniforms;
 
@@ -71,63 +62,27 @@ export const RunProgram = Command({
     },
 
     render(protocol: ProtocolReader, context: RunnerContext) {
-        const programId = protocol.readUInt32();
-        const count = protocol.readUInt32();
+        const [programId, vaoId, offset, count] = protocol.readUInt32Array(4);
 
-        const program = context.getResource(programId, Program);
+        const program = context.getResource(Program, programId);
+        const vao = context.getResource(VAO, vaoId);
 
-        if (!program) {
+        if (!program || !vao) {
             return;
         }
 
-        const {attributes, uniforms} = program.layout;
+        const {uniforms} = program.layout;
 
         const gl = context.gl;
 
-        const attributeDataLength = attributes.length * 2;
-
-        const data = protocol.readUInt32Array(attributeDataLength);
-
-        const buffers: {buffer: Buffer, offset: number}[] = [];
-
-        for (let i = 0; i < attributeDataLength; i += 2) {
-            const bufferId = data[i];
-            const offset = data[i + 1];
-
-            const buffer = context.getResource(bufferId, Buffer);
-
-            if (!buffer) {
-                return;
-            }
-
-            buffers.push({buffer, offset});
-        }
-
-        const vao = gl.createVertexArray();
-
-        gl.bindVertexArray(vao);
-
-        for (let i = 0; i < attributes.length; i++) {
-            const {buffer, offset} = buffers[i];
-            const {size, dataType, normalize} = attributes[i];
-            const location = program.attributeLocations[i];
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, buffer.buffer);
-            gl.enableVertexAttribArray(location);
-
-            if (isIntegerType(dataType)) {
-                gl.vertexAttribIPointer(location, size, dataType, 0, offset);
-            } else {
-                gl.vertexAttribPointer(location, size, dataType, normalize, 0, offset);
-            }
-        }
+        gl.bindVertexArray(vao.vao);
 
         gl.useProgram(program.program);
 
         setFixedUniforms(context, program);
 
         for (let i = FIXED_UNIFORMS.length; i < uniforms.length; i++) {
-            const {size, dataType} = attributes[i];
+            const {size, dataType} = uniforms[i];
             const location = program.uniformLocations[i];
 
             if (dataType === WebGLRenderingContext.FLOAT) {
@@ -140,7 +95,5 @@ export const RunProgram = Command({
         }
 
         gl.drawArrays(gl.TRIANGLES, 0, count);
-
-        gl.deleteVertexArray(vao);
     }
 });

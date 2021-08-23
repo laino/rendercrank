@@ -1,5 +1,5 @@
 import { ProtocolWriter } from './protocol';
-import { ResourceRef, ResourceState } from './resource';
+import { ResourceRef, ResourceRefState } from './resource';
 import { Command, COMMAND_MAP } from './command';
 
 export enum Instruction {
@@ -9,16 +9,19 @@ export enum Instruction {
     UPDATE_RESOURCE,
     LOAD_RESOURCE,
     UNLOAD_RESOURCE,
-    ADVANCE
+    ADVANCE,
+    BARRIER,
 }
 
 export interface InstructorContext {
-    loadResource(resource: ResourceRef);
+    readyResource(resource: ResourceRef);
 }
 
 export class Instructor implements InstructorContext {
     private mappedCommands: Record<string, number> = {};
     private commandProtocol: ProtocolWriter;
+
+    private loadingResources = new Set<ResourceRef>();
 
     public constructor(private protocol: ProtocolWriter) {
     }
@@ -50,81 +53,69 @@ export class Instructor implements InstructorContext {
         command.submit(commandProtocol, this, ...args);
     }
 
+    public async waitForResources() {
+        for (const resource of this.loadingResources) {
+            await resource.load();
+            this.readyResource(resource);
+        }
+
+        this.loadingResources.clear();
+    }
+
     public finish() {
         const commandProtocol = this.commandProtocol;
         const protocol = this.protocol;
 
         commandProtocol.writeUInt8(Instruction.STOP);
+        protocol.writeUInt8(Instruction.BARRIER);
         protocol.writeUInt8(Instruction.ADVANCE);
         protocol.advance();
 
         for (const data of commandProtocol.flush()) {
             protocol.passData(data);
         }
+
+        this.loadingResources.clear();
     }
 
-    public loadResource(resource: ResourceRef) {
+    public readyResource(resource: ResourceRef) {
         const protocol = this.protocol;
 
-        if (resource.state === ResourceState.LOAD_ABORTED) {
-            resource.state = ResourceState.LOADING;
-            return;
-        }
+        resource.load();
 
-        if (resource.state === ResourceState.UNLOADED) {
-            resource.state = ResourceState.LOADING;
-
-            const result = resource.load(this);
-
-            if (result) {
-                result.then(() => {
-                    if (resource.state === ResourceState.LOAD_ABORTED) {
-                        resource.onUnload();
-                        resource.state = ResourceState.UNLOADED;
-                    } else {
-                        resource.state = ResourceState.LOADED;
-                    }
-                });
-                return;
-            }
-
-            resource.state = ResourceState.LOADED;
-        }
-
-        if (resource.state === ResourceState.LOADED) {
+        if (resource.state === ResourceRefState.LOADED) {
             protocol.writeUInt8(Instruction.LOAD_RESOURCE);
             protocol.writeUInt32(resource.id);
             protocol.writeString(resource.type.resourceName);
-            resource.writeData(protocol, this);
-
-            resource.state = ResourceState.READY;
+            resource.ready(protocol);
+        } else if (resource.state === ResourceRefState.LOADING) {
+            this.loadingResources.add(resource);
+            return;
         }
 
-        if (resource.state === ResourceState.READY && resource.needsUpdate) {
-            resource.needsUpdate = false;
+        if (resource.state === ResourceRefState.READY && resource.needsUpdate) {
             protocol.writeUInt8(Instruction.UPDATE_RESOURCE);
             protocol.writeUInt32(resource.id);
-            resource.writeUpdate(protocol, this);
+            resource.update(protocol);
         }
     }
 
     public unloadResource(resource: ResourceRef) {
         const protocol = this.protocol;
 
-        if (resource.refcount > 0 || resource.state === ResourceState.UNLOADED) {
+        if (resource.refcount > 0) {
             return;
         }
 
-        if (resource.state === ResourceState.READY) {
+        if (resource.state === ResourceRefState.READY) {
             protocol.writeUInt8(Instruction.UNLOAD_RESOURCE);
             protocol.writeUInt32(resource.id);
+            resource.unready(protocol);
         }
 
-        if (resource.state !== ResourceState.LOADING) {
-            resource.onUnload();
+        if (resource.state === ResourceRefState.LOADED) {
+            resource.unload();
         }
-
-        resource.state = ResourceState.UNLOADED;
     }
 
 }

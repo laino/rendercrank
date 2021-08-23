@@ -15,7 +15,7 @@ Features
 
 - [x] **Automatic Resource Management**: Keeps track of what resources you used and where.
 
-- [x] **Resource Streaming**: Load resources asynchronously.
+- [x] **Resource Streaming**: Load textures, compile shaders, ..., without blocking rendering.
 
 - [x] **TypeScript**: Typechecked all the way down to shader attributes.
 

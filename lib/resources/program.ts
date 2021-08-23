@@ -1,53 +1,59 @@
 import {
     Resource,
     ResourceRef,
+    ResourceYieldUntil,
     ProtocolReader,
     ProtocolWriter,
     registerResourceType
 } from '../core';
 
+import { VAORef } from './vao';
+import { BufferRef } from './buffer';
+
 const PREAMBLE = "#version 300 es\nprecision highp float;\n";
 
-function AttrTypeInfo(dataType: GLenum, size: number) {
+function _typeInfo(dataType: GLenum, size: number) {
     return {
         normalize: false,
         dataType,
         size,
+        stride: 0
     };
 }
 
-export const AttributeTypeLayout = {
-    'float': AttrTypeInfo(WebGLRenderingContext.FLOAT, 1),
-    'vec2': AttrTypeInfo(WebGLRenderingContext.FLOAT, 2),
-    'vec3': AttrTypeInfo(WebGLRenderingContext.FLOAT, 3),
-    'vec4': AttrTypeInfo(WebGLRenderingContext.FLOAT, 4),
-    'mat2': AttrTypeInfo(WebGLRenderingContext.FLOAT, 4),
-    'mat3': AttrTypeInfo(WebGLRenderingContext.FLOAT, 9),
-    'mat4': AttrTypeInfo(WebGLRenderingContext.FLOAT, 16),
-    'int': AttrTypeInfo(WebGLRenderingContext.INT, 1),
-    'ivec2': AttrTypeInfo(WebGLRenderingContext.INT, 2),
-    'ivec3': AttrTypeInfo(WebGLRenderingContext.INT, 3),
-    'ivec4': AttrTypeInfo(WebGLRenderingContext.INT, 4),
-    'uint': AttrTypeInfo(WebGLRenderingContext.UNSIGNED_INT, 1),
-    'uvec2': AttrTypeInfo(WebGLRenderingContext.UNSIGNED_INT, 2),
-    'uvec3': AttrTypeInfo(WebGLRenderingContext.UNSIGNED_INT, 3),
-    'uvec4': AttrTypeInfo(WebGLRenderingContext.UNSIGNED_INT, 4),
+export const ATTRIBUTE_TYPE_LAYOUT = {
+    'float': _typeInfo(WebGLRenderingContext.FLOAT, 1),
+    'vec2': _typeInfo(WebGLRenderingContext.FLOAT, 2),
+    'vec3': _typeInfo(WebGLRenderingContext.FLOAT, 3),
+    'vec4': _typeInfo(WebGLRenderingContext.FLOAT, 4),
+    'mat2': _typeInfo(WebGLRenderingContext.FLOAT, 4),
+    'mat3': _typeInfo(WebGLRenderingContext.FLOAT, 9),
+    'mat4': _typeInfo(WebGLRenderingContext.FLOAT, 16),
+    'int': _typeInfo(WebGLRenderingContext.INT, 1),
+    'ivec2': _typeInfo(WebGLRenderingContext.INT, 2),
+    'ivec3': _typeInfo(WebGLRenderingContext.INT, 3),
+    'ivec4': _typeInfo(WebGLRenderingContext.INT, 4),
+    'uint': _typeInfo(WebGLRenderingContext.UNSIGNED_INT, 1),
+    'uvec2': _typeInfo(WebGLRenderingContext.UNSIGNED_INT, 2),
+    'uvec3': _typeInfo(WebGLRenderingContext.UNSIGNED_INT, 3),
+    'uvec4': _typeInfo(WebGLRenderingContext.UNSIGNED_INT, 4),
 };
 
-export const UniformTypeLayout = Object.assign({
-    'bool': AttrTypeInfo(WebGLRenderingContext.BOOL, 1),
-    'bvec2': AttrTypeInfo(WebGLRenderingContext.BOOL, 2),
-    'bvec3': AttrTypeInfo(WebGLRenderingContext.BOOL, 3),
-    'bvec4': AttrTypeInfo(WebGLRenderingContext.BOOL, 4),
-}, AttributeTypeLayout);
+export const UNIFORM_TYPE_LAYOUT = Object.assign({
+    'bool': _typeInfo(WebGLRenderingContext.BOOL, 1),
+    'bvec2': _typeInfo(WebGLRenderingContext.BOOL, 2),
+    'bvec3': _typeInfo(WebGLRenderingContext.BOOL, 3),
+    'bvec4': _typeInfo(WebGLRenderingContext.BOOL, 4),
+}, ATTRIBUTE_TYPE_LAYOUT);
 
-export type AttributeType = keyof (typeof AttributeTypeLayout);
-export type UniformType = keyof (typeof UniformTypeLayout);
+export type AttributeType = keyof (typeof ATTRIBUTE_TYPE_LAYOUT);
+export type UniformType = keyof (typeof UNIFORM_TYPE_LAYOUT);
 
 export interface AttributeDefinition {
     type: AttributeType;
     dataType?: GLenum;
     size?: number;
+    stride?: number;
     normalize?: boolean;
 }
 
@@ -76,6 +82,12 @@ export interface ProgramLayout {
     uniforms: UniformLayout;
 }
 
+export type ProgramAttributesData<P extends ProgramDefinition, T = number[]> =
+    Required<Record<keyof P['attributes'], T>>;
+
+export type ProgramUniformData<P extends ProgramDefinition, T = number[]> =
+    Required<Record<keyof P['uniforms'], T>>;
+
 export const FIXED_UNIFORMS: UniformLayout = [{
     name: 'u_scale',
     type: 'vec4',
@@ -96,14 +108,14 @@ export class ProgramRef<D extends ProgramDefinition = ProgramDefinition> extends
 
         const attributes = Object.entries(def.attributes).map(([name, type]) => {
             return typeof type === 'string' ?
-                Object.assign({}, AttributeTypeLayout[type], {type, name}) :
-                Object.assign({}, AttributeTypeLayout[type.type], type, {name});
+                Object.assign({}, ATTRIBUTE_TYPE_LAYOUT[type], {type, name}) :
+                Object.assign({}, ATTRIBUTE_TYPE_LAYOUT[type.type], type, {name});
         });
 
         const uniforms = FIXED_UNIFORMS.concat(Object.entries(def.uniforms).map(([name, type]) => {
             return typeof type === 'string' ?
-                Object.assign({}, UniformTypeLayout[type], {type, name}) :
-                Object.assign({}, UniformTypeLayout[type.type], type, {name});
+                Object.assign({}, UNIFORM_TYPE_LAYOUT[type], {type, name}) :
+                Object.assign({}, UNIFORM_TYPE_LAYOUT[type.type], type, {name});
         }));
 
         this.layout = Object.assign({}, {
@@ -118,7 +130,22 @@ export class ProgramRef<D extends ProgramDefinition = ProgramDefinition> extends
         });
     }
 
-    public writeData(protocol: ProtocolWriter) {
+    public createVAO(buffers: ProgramAttributesData<D, {buffer: BufferRef, offset: number}>) {
+        return new VAORef(this.layout.attributes.map(({name, size, stride, dataType, normalize}) => {
+            const {offset, buffer} = buffers[name];
+
+            return {
+                size,
+                stride,
+                dataType,
+                normalize,
+                offset,
+                buffer
+            };
+        }));
+    }
+
+    protected loadResource(protocol: ProtocolWriter) {
         protocol.writeString(JSON.stringify(this.layout));
     }
 }
@@ -128,50 +155,57 @@ export class Program extends Resource {
 
     public layout: ProgramLayout;
 
-    public attributeLocations: number[];
     public uniformLocations: WebGLUniformLocation[];
 
     public vertexShader: WebGLShader;
     public fragmentShader: WebGLShader;
     public program: WebGLProgram;
 
-    public load(protocol: ProtocolReader) {
+    public *load(protocol: ProtocolReader) {
+        const context = this.context;
+        const parallelCompileExt = context.khrParallelShaderCompile;
+        const gl = context.gl;
+
         const layout = this.layout = JSON.parse(protocol.readString()) as ProgramLayout;
 
-        const gl = this.context.gl;
-
         const vertexShader = this.vertexShader = gl.createShader(gl.VERTEX_SHADER);
-
-        gl.shaderSource(vertexShader, layout.vertexShader);
-        gl.compileShader(vertexShader);
-
-        if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-            throw new Error(gl.getShaderInfoLog(vertexShader) +
-                            `\n ---- VERTEX SHADER ----\n` + layout.vertexShader);
-        }
-
         const fragmentShader = this.fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-
-        gl.shaderSource(fragmentShader, layout.fragmentShader);
-        gl.compileShader(fragmentShader);
-
-        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-            throw new Error(gl.getShaderInfoLog(fragmentShader) +
-                            '\n ---- FRAGMENT SHADER ----\n' + layout.fragmentShader);
-        }
-
         const program = this.program = gl.createProgram();
 
         gl.attachShader(program, vertexShader);
         gl.attachShader(program, fragmentShader);
 
+        gl.shaderSource(vertexShader, layout.vertexShader);
+        gl.shaderSource(fragmentShader, layout.fragmentShader);
+
+        gl.compileShader(vertexShader);
+        gl.compileShader(fragmentShader);
+
+        yield ResourceYieldUntil.LATER; // yield so shaders can be compiled in parallel
+
         gl.linkProgram(program);
 
-        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-            throw new Error(gl.getProgramInfoLog(program));
+        yield ResourceYieldUntil.LATER; // yield so programs can be compiled in parallel
+
+        if (parallelCompileExt) {
+            while (context.streaming && !gl.getProgramParameter(program, parallelCompileExt.COMPLETION_STATUS_KHR)) {
+                yield ResourceYieldUntil.BARRIER;
+            }
         }
 
-        this.attributeLocations = layout.attributes.map(({name}) => gl.getAttribLocation(program, name));
+        yield ResourceYieldUntil.FINALIZE; // wait until everyone else has queued their work too
+
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            const message =
+                `Program linking failed:\n${gl.getProgramInfoLog(program)}\n` +
+                `Vertex shader:\n${gl.getShaderInfoLog(vertexShader)}\n` +
+                `Fragment shader:\n${gl.getShaderInfoLog(fragmentShader)}\n\n` +
+                `---- VERTEX SHADER ----\n${layout.vertexShader}\n` +
+                `---- FRAGMENT SHADER ----\n${layout.fragmentShader}`;
+
+            throw new Error(message);
+        }
+
         this.uniformLocations = layout.uniforms.map(({name}) => gl.getUniformLocation(program, name));
     }
 
@@ -179,7 +213,9 @@ export class Program extends Resource {
         // noop
     }
 
-    public unload() {
+    public *unload() {
+        yield ResourceYieldUntil.STABLE;
+
         const gl = this.context.gl;
 
         gl.deleteProgram(this.program);
@@ -211,7 +247,7 @@ function createFragmentShaderCode(body: string, uniforms: UniformLayout) {
 
 function createAttributes(attributes: AttributeLayout) {
     return attributes
-        .map(_ => `in ${_.type} ${_.name};`)
+        .map((_, i) => `layout(location = ${i}) in ${_.type} ${_.name};`)
         .join('\n') + '\n';
 }
 
